@@ -105,6 +105,28 @@
       <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
       <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
   </picture>
+  
+  <!-- Debug logs display -->
+  <div id="debug-logs" style="
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    font-family: monospace;
+    font-size: 12px;
+    max-width: 400px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 9999;
+    direction: ltr;
+  ">
+    <div style="font-weight: bold; margin-bottom: 5px;">🔍 Debug Logs:</div>
+    <div id="log-content"></div>
+  </div>
+  
   <script>
     // Prevent infinite reload
     let reloadCount = parseInt(sessionStorage.getItem('reloadCount') || '0');
@@ -116,18 +138,36 @@
       sessionStorage.setItem('reloadCount', (reloadCount + 1).toString());
     }
     
-    // Freeze console logs
+    // Freeze console logs and display them on page
     const originalLog = console.log;
     const originalError = console.error;
     const logs = [];
+    const logContent = document.getElementById('log-content');
+    
+    function addLogToPage(message, type = 'log') {
+      const logEntry = document.createElement('div');
+      logEntry.style.color = type === 'error' ? '#ff6b6b' : '#4CAF50';
+      logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logContent.appendChild(logEntry);
+      logContent.scrollTop = logContent.scrollHeight;
+      
+      // Keep only last 10 logs
+      while (logContent.children.length > 10) {
+        logContent.removeChild(logContent.firstChild);
+      }
+    }
     
     console.log = function(...args) {
-      logs.push({ type: 'log', message: args.join(' '), time: new Date().toISOString() });
+      const message = args.join(' ');
+      logs.push({ type: 'log', message, time: new Date().toISOString() });
+      addLogToPage(message, 'log');
       originalLog.apply(console, args);
     };
     
     console.error = function(...args) {
-      logs.push({ type: 'error', message: args.join(' '), time: new Date().toISOString() });
+      const message = args.join(' ');
+      logs.push({ type: 'error', message, time: new Date().toISOString() });
+      addLogToPage(message, 'error');
       originalError.apply(console, args);
     };
     
@@ -186,7 +226,7 @@
       
       // Create new script
       const script = document.createElement('script');
-      script.src = 'flutter_bootstrap.js?v=1.0.2';
+      script.src = 'flutter_bootstrap.js?v=1.0.3';
       script.async = false; // Disable async to control loading
       
       script.onload = () => {
@@ -206,6 +246,10 @@
               if (splash) {
                 splash.style.display = 'none';
               }
+              // Hide debug logs after successful load
+              setTimeout(() => {
+                document.getElementById('debug-logs').style.display = 'none';
+              }, 2000);
               // Reset reload count on success
               sessionStorage.removeItem('reloadCount');
             }).catch(error => {
