@@ -143,16 +143,82 @@
       }
     })();
     
+    // Add error handling for Flutter loading
+    window.addEventListener('error', function(e) {
+      console.error('❌ JavaScript error:', e.error);
+    });
+    
+    window.addEventListener('unhandledrejection', function(e) {
+      console.error('❌ Unhandled promise rejection:', e.reason);
+    });
+    
     // Check if Flutter loads
     window.addEventListener('load', function() {
       console.log('📱 Page loaded, checking Flutter...');
+      
+      // Add a timeout to check Flutter
       setTimeout(() => {
         if (window.flutter) {
           console.log('✅ Flutter loaded successfully');
         } else {
-          console.log('❌ Flutter not loaded');
+          console.log('❌ Flutter not loaded, trying manual initialization...');
+          
+          // Try to manually load Flutter
+          const script = document.createElement('script');
+          script.src = 'flutter_bootstrap.js';
+          script.onload = () => {
+            console.log('✅ Flutter bootstrap loaded manually');
+            // Give it time to initialize
+            setTimeout(() => {
+              if (window.flutter) {
+                console.log('✅ Flutter initialized after manual load');
+              } else {
+                console.log('❌ Flutter still not initialized');
+                // Show error message
+                document.body.innerHTML = `
+                  <div style="
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    font-family: Arial, sans-serif;
+                    background: linear-gradient(135deg, #880404, #c20202);
+                    color: white;
+                    text-align: center;
+                  ">
+                    <div style="background: rgba(0,0,0,0.3); padding: 30px; border-radius: 10px;">
+                      <h1>😔 عذرًا</h1>
+                      <p>حدث خطأ في تحميل التطبيق</p>
+                      <button onclick="window.location.reload()" style="
+                        background: #4CAF50;
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        margin: 10px;
+                      ">إعادة المحاولة</button>
+                      <button onclick="window.location.href='test.html'" style="
+                        background: #2196F3;
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        margin: 10px;
+                      ">صفحة الاختبار</button>
+                    </div>
+                  </div>
+                `;
+              }
+            }, 2000);
+          };
+          script.onerror = () => {
+            console.log('❌ Flutter bootstrap failed to load');
+          };
+          document.head.appendChild(script);
         }
-      }, 2000);
+      }, 3000); // Give Flutter more time to load
     });
   </script>
   <script src="flutter_bootstrap.js" async=""></script>
