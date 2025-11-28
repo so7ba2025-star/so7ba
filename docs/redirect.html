@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>صحبة - أهلاً بك</title>
+    <meta http-equiv="refresh" content="0; url=./index_simple.html">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #880404, #c20202);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h1>أهلاً بك في صحبة</h1>
+        <p>جاري التحميل...</p>
+        <div class="loader"></div>
+        <p>إذا لم يتم تحويلك تلقائياً، <a href="./index_simple.html" style="color: #fff;">اضغط هنا</a></p>
+    </div>
+</body>
+</html>
