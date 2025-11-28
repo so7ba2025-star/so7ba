@@ -24,7 +24,7 @@ jobs:
       run: flutter pub get
       
     - name: Build web app
-      run: flutter build web --base-href "/${{ github.event.repository.name }}/"
+      run: flutter build web --base-href "/"
       
     - name: Add 404.html for OAuth
       run: |
@@ -35,7 +35,7 @@ jobs:
           <meta charset="UTF-8">
           <title>Redirect to App</title>
           <script>
-            window.location.href = '/${{ github.event.repository.name }}/' + window.location.search + window.location.hash;
+            window.location.href = '/' + window.location.search + window.location.hash;
           </script>
         </head>
         <body>
@@ -49,4 +49,3 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./build/web
-        destination_dir: so7ba
