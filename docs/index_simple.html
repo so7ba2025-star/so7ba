@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>So7ba - Simple Version</title>
+    <base href="./">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #880404, #c20202);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(0,0,0,0.3);
+            padding: 30px;
+            border-radius: 10px;
+        }
+        .logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success { background: #4CAF50; }
+        .error { background: #f44336; }
+        .info { background: #2196F3; }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+        }
+        button:hover { background: #45a049; }
+        button.secondary { background: #2196F3; }
+        button.secondary:hover { background: #1976D2; }
+        .debug {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            text-align: left;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        #flutter-container {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🎮 So7ba</div>
+        <h1>مرحباً بك في لعبة الدومينو!</h1>
+        
+        <div id="status" class="status info">
+            جاري التحميل...
+        </div>
+        
+        <div id="debug-info" class="debug">
+            <strong>Debug Info:</strong><br>
+            URL: <span id="url"></span><br>
+            Base href: <span id="base-href"></span><br>
+            Flutter loaded: <span id="flutter-status">No</span><br>
+            Flutter engine: <span id="engine-status">No</span>
+        </div>
+        
+        <button onclick="tryLoadFlutter()" id="load-btn">تحميل التطبيق</button>
+        <button onclick="goToTest()" class="secondary">صفحة الاختبار</button>
+        
+        <div id="flutter-container"></div>
+    </div>
+
+    <script>
+        // Update debug info
+        document.getElementById('url').textContent = window.location.href;
+        document.getElementById('base-href').textContent = document.querySelector('base')?.href || 'None';
+        
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        function updateDebugInfo() {
+            document.getElementById('flutter-status').textContent = window.flutter ? 'Yes' : 'No';
+            document.getElementById('engine-status').textContent = window._flutter ? 'Yes' : 'No';
+        }
+        
+        function tryLoadFlutter() {
+            updateStatus('جاري تحميل Flutter...', 'info');
+            const btn = document.getElementById('load-btn');
+            btn.disabled = true;
+            btn.textContent = 'جاري التحميل...';
+            
+            // Load Flutter bootstrap
+            const script = document.createElement('script');
+            script.src = 'flutter_bootstrap.js?v=1.0.6';
+            script.onload = () => {
+                updateStatus('Flutter bootstrap تم تحميله، جاري تهيئة التطبيق...', 'info');
+                updateDebugInfo();
+                
+                // Wait for Flutter engine
+                setTimeout(() => {
+                    if (window._flutter && window._flutter.loader) {
+                        updateStatus('جاري تشغيل التطبيق...', 'info');
+                        
+                        window._flutter.loader.loadEntrypoint({
+                            entrypointUrl: 'main.dart.js'
+                        }).then(() => {
+                            updateStatus('🎉 التطبيق يعمل بنجاح!', 'success');
+                            updateDebugInfo();
+                            
+                            // Hide our UI and show Flutter app
+                            setTimeout(() => {
+                                document.querySelector('.container').style.display = 'none';
+                                document.getElementById('flutter-container').style.display = 'block';
+                            }, 2000);
+                            
+                        }).catch(error => {
+                            updateStatus(`❌ فشل تشغيل Flutter: ${error.message}`, 'error');
+                            updateDebugInfo();
+                            btn.disabled = false;
+                            btn.textContent = 'إعادة المحاولة';
+                        });
+                    } else {
+                        updateStatus('❌ Flutter engine غير جاهز', 'error');
+                        updateDebugInfo();
+                        btn.disabled = false;
+                        btn.textContent = 'إعادة المحاولة';
+                    }
+                }, 2000);
+            };
+            
+            script.onerror = () => {
+                updateStatus('❌ فشل تحميل Flutter bootstrap', 'error');
+                updateDebugInfo();
+                btn.disabled = false;
+                btn.textContent = 'إعادة المحاولة';
+            };
+            
+            document.head.appendChild(script);
+        }
+        
+        function goToTest() {
+            window.location.href = 'test.html';
+        }
+        
+        // Auto-update debug info
+        setInterval(updateDebugInfo, 1000);
+        
+        // Initial status
+        updateStatus('صفحة So7ba البسيطة جاهزة - اضغط "تحميل التطبيق"', 'success');
+    </script>
+</body>
+</html>
