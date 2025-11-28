@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>So7ba - Redirect</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <script>
+        console.log(' So7ba redirect page loaded');
+        
         // Handle OAuth callback redirect
         (function() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -14,12 +19,13 @@
             let newUrl = '/so7ba/';
             if (code || error) {
                 newUrl += '?' + window.location.search.substring(1);
-                console.log('OAuth callback detected, redirecting to:', newUrl);
+                console.log(' OAuth callback detected, redirecting to:', newUrl);
             } else {
-                console.log('No OAuth callback, redirecting to app:', newUrl);
+                console.log(' No OAuth callback, redirecting to app:', newUrl);
             }
             
             // Redirect to the correct subdirectory
+            console.log(' Redirecting to:', newUrl);
             window.location.href = newUrl;
         })();
     </script>
