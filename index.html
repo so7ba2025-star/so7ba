@@ -105,6 +105,56 @@
       <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
       <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
   </picture>
+  <script>
+    console.log('🚀 Loading So7ba app...');
+    
+    // Handle OAuth callback
+    (function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const error = urlParams.get('error');
+      
+      console.log('🔍 Checking URL params:', { code: code ? 'present' : null, error });
+      
+      if (code || error) {
+        console.log('🔄 OAuth callback detected:', { code: code ? 'present' : null, error });
+        
+        // Store the callback data for Flutter to process
+        if (code) {
+          sessionStorage.setItem('oauth_code', code);
+          console.log('✅ Stored OAuth code');
+        }
+        if (error) {
+          sessionStorage.setItem('oauth_error', error);
+          console.log('❌ Stored OAuth error');
+        }
+        
+        // Clean the URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        console.log('🧹 Cleaned URL');
+        
+        // Reload to trigger Flutter app with the session data
+        if (!window.flutter) {
+          console.log('🔄 Reloading for Flutter...');
+          setTimeout(() => {
+            window.location.reload();
+          }, 100);
+        }
+      }
+    })();
+    
+    // Check if Flutter loads
+    window.addEventListener('load', function() {
+      console.log('📱 Page loaded, checking Flutter...');
+      setTimeout(() => {
+        if (window.flutter) {
+          console.log('✅ Flutter loaded successfully');
+        } else {
+          console.log('❌ Flutter not loaded');
+        }
+      }, 2000);
+    });
+  </script>
   <script src="flutter_bootstrap.js" async=""></script>
 
 
