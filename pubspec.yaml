@@ -1,0 +1,129 @@
+name: so7ba
+description: "So7ba - Domino Cafe Clone مع أحلى حركة وصوت في 2025"
+publish_to: 'none'
+version: 1.1.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # UI & Fonts
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.10+1
+  lottie: ^3.0.0
+  confetti: ^0.7.0
+  shimmer: ^3.0.0
+  percent_indicator: ^4.2.3
+  cached_network_image: ^3.3.1
+  flutter_animate: ^4.5.0
+
+  # State Management & Storage
+  flutter_riverpod: ^2.6.1
+  provider: ^6.1.1
+  shared_preferences: ^2.3.2
+  path_provider: ^2.1.3
+
+  # Auth & Backend
+  supabase_flutter: ^2.6.0
+  google_sign_in: ^6.2.1
+  http: ^1.2.2
+
+  # Media & Audio
+  just_audio: ^0.9.42
+  audioplayers: ^6.1.0
+  record: ^5.0.5
+  image_picker: ^1.0.7
+  video_player: ^2.8.8
+
+  # Utilities
+  uuid: ^4.5.1
+  url_launcher: ^6.3.0
+  share_plus: ^10.0.2
+  package_info_plus: ^8.0.0
+  permission_handler: ^11.3.1
+
+  # Firebase
+  firebase_core: ^3.15.2
+  firebase_messaging: ^15.0.0
+  flutter_local_notifications: ^17.2.1
+
+  # ——— الإضافات الجديدة للدومينو السحرية ———
+  flame: ^1.19.0           # محرك الألعاب الأقوى في Flutter
+  flame_audio: ^2.2.0       # صوت بدون لاج
+  animations: ^2.0.11       # أنيميشن إضافي لو حبيت
+  
+  # ——— مكتبات إعادة التصميم الجديدة ———
+  flame_forge2d: ^0.19.2   # محرك الفيزيقا 2D (إصدار أحدث)
+  flutter_slidable: ^4.0.3  # للسلايد والحركات (إصدار أحدث)
+
+dependency_overrides:
+  record_linux:
+    git:
+      url: https://github.com/llfbandit/record.git
+      path: record_linux
+      ref: master
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.1
+  build_runner: ^2.4.12
+  json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/config/
+    - assets/images/
+    - assets/sounds/
+    - assets/Icon/
+    - assets/rooms/
+    - assets/Domino_tiels/
+    - assets/audio/              # مهم جدًا للصوتيات (place.mp3, shuffle.mp3, ...)
+    - assets/images/table_wood.jpg   # خلفية الطاولة (اختياري بس حلو)
+
+  # لو عايز تضيف خطوط مخصصة
+  # fonts:
+  #   - family: Cairo
+  #     fonts:
+  #       - asset: assets/fonts/Cairo-Regular.ttf
+  #       - asset: assets/fonts/Cairo-Bold.ttf
+  #         weight: 700
+
+flutter_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/Icon/app_icon.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/Icon/app_icon.png"
+  windows:
+    generate: true
+    image_path: "assets/Icon/app_icon.png"
+    icon_size: 48
+  macos:
+    generate: true
+    image_path: "assets/Icon/app_icon.png"
+  linux:
+    generate: true
+    image_path: "assets/Icon/app_icon.png"
+
+flutter_native_splash:
+  color: "#0F4C3A"
+  image: assets/images/logo.png
+  android_12:
+    color: "#0F4C3A"
+    image: assets/images/logo.png
+  web: true
