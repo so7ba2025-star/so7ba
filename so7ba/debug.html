@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>So7ba Debug</title>
+    <base href="/so7ba/">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #880404, #c20202);
+            color: white;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(0,0,0,0.3);
+            padding: 30px;
+            border-radius: 10px;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: left;
+        }
+        .success { background: #4CAF50; }
+        .error { background: #f44336; }
+        .info { background: #2196F3; }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover { background: #45a049; }
+        .file-check {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 So7ba Debug Page</h1>
+        <p>صفحة تشخيص مشاكل التطبيق</p>
+        
+        <div id="status" class="status info">
+            جاري الفحص...
+        </div>
+        
+        <button onclick="checkAllFiles()">فحص جميع الملفات</button>
+        <button onclick="checkFlutter()">فحص Flutter</button>
+        <button onclick="tryLoadFlutter()">محاولة تحميل Flutter</button>
+        <button onclick="goToApp()">فتح التطبيق</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+        
+        function checkFile(url, description) {
+            return fetch(url, { method: 'HEAD' })
+                .then(response => {
+                    const size = response.headers.get('content-length');
+                    const sizeText = size ? ` (${Math.round(size/1024)}KB)` : '';
+                    return { 
+                        success: response.ok, 
+                        status: response.status,
+                        size: sizeText,
+                        description 
+                    };
+                })
+                .catch(error => ({ 
+                    success: false, 
+                    error: error.message,
+                    description 
+                }));
+        }
+        
+        async function checkAllFiles() {
+            updateStatus('جاري فحص جميع الملفات...');
+            
+            const files = [
+                { url: 'flutter_bootstrap.js', desc: 'Flutter Bootstrap' },
+                { url: 'main.dart.js', desc: 'Main Dart App' },
+                { url: 'manifest.json', desc: 'App Manifest' },
+                { url: 'assets/AssetManifest.json', desc: 'Asset Manifest' },
+                { url: 'favicon.png', desc: 'Favicon' },
+                { url: 'index.html', desc: 'Main HTML' }
+            ];
+            
+            const results = await Promise.all(files.map(f => checkFile(f.url, f.desc)));
+            
+            results.forEach(result => {
+                if (result.success) {
+                    addResult(`✅ ${result.description} - موجود ${result.size}`, 'success');
+                } else {
+                    addResult(`❌ ${result.description} - غير موجود (${result.status || result.error})`, 'error');
+                }
+            });
+            
+            const allExist = results.every(r => r.success);
+            updateStatus(allExist ? '✅ جميع الملفات موجودة' : '❌ بعض الملفات مفقودة', allExist ? 'success' : 'error');
+        }
+        
+        function checkFlutter() {
+            updateStatus('جاري فحص Flutter...');
+            
+            // Check if Flutter is loaded
+            if (window._flutter) {
+                addResult('✅ _flutter موجود', 'success');
+            } else {
+                addResult('❌ _flutter غير موجود', 'error');
+            }
+            
+            if (window.flutter) {
+                addResult('✅ flutter موجود', 'success');
+            } else {
+                addResult('❌ flutter غير موجود', 'error');
+            }
+            
+            // Check scripts
+            const scripts = document.querySelectorAll('script[src*="flutter"]');
+            addResult(`📝 عدد سكربتات Flutter: ${scripts.length}`, 'info');
+            
+            scripts.forEach((script, index) => {
+                addResult(`📝 سكربت ${index + 1}: ${script.src}`, 'info');
+            });
+        }
+        
+        function tryLoadFlutter() {
+            updateStatus('جاري محاولة تحميل Flutter...');
+            
+            const script = document.createElement('script');
+            script.src = 'flutter_bootstrap.js?v=1.0.4';
+            script.onload = () => {
+                addResult('✅ Flutter bootstrap تم تحميله بنجاح', 'success');
+                
+                setTimeout(() => {
+                    if (window._flutter && window._flutter.loader) {
+                        addResult('✅ Flutter engine جاهز', 'success');
+                        
+                        window._flutter.loader.loadEntrypoint({
+                            entrypointUrl: 'main.dart.js'
+                        }).then(() => {
+                            addResult('🎉 Flutter app تم تحميله بنجاح!', 'success');
+                            updateStatus('✅ Flutter يعمل!', 'success');
+                        }).catch(error => {
+                            addResult(`❌ فشل تشغيل Flutter: ${error.message}`, 'error');
+                        });
+                    } else {
+                        addResult('❌ Flutter engine غير جاهز', 'error');
+                    }
+                }, 2000);
+            };
+            
+            script.onerror = () => {
+                addResult('❌ Flutter bootstrap فشل في التحميل', 'error');
+            };
+            
+            document.head.appendChild(script);
+        }
+        
+        function goToApp() {
+            window.location.href = 'index.html';
+        }
+        
+        // Auto-check on load
+        window.addEventListener('load', function() {
+            updateStatus('🔍 صفحة التشخيص جاهزة', 'success');
+            addResult('🚀 صفحة التشخيص جاهزة', 'success');
+            
+            // Check basic info
+            addResult(`📍 URL: ${window.location.href}`, 'info');
+            addResult(`🌐 Base href: ${document.querySelector('base')?.href || 'غير موجود'}`, 'info');
+            addResult(`📱 User Agent: ${navigator.userAgent.substring(0, 50)}...`, 'info');
+        });
+    </script>
+</body>
+</html>
