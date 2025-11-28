@@ -135,50 +135,128 @@
       }
     })();
     
-    // Add timeout to prevent infinite loading
-    setTimeout(() => {
-      const splash = document.getElementById('splash');
-      if (splash && splash.style.display !== 'none') {
-        console.log('❌ App taking too long to load, showing error');
-        document.body.innerHTML = `
-          <div style="
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #880404, #c20202);
-            color: white;
-            text-align: center;
-          ">
-            <div style="background: rgba(0,0,0,0.3); padding: 30px; border-radius: 10px;">
-              <h1>😔 عذرًا</h1>
-              <p>التطبيق يستغرق وقتًا طويلاً في التحميل</p>
-              <button onclick="window.location.reload()" style="
-                background: #4CAF50;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 5px;
-                cursor: pointer;
-                margin: 10px;
-              ">إعادة المحاولة</button>
-              <button onclick="window.location.href='../test.html'" style="
-                background: #2196F3;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 5px;
-                cursor: pointer;
-                margin: 10px;
-              ">صفحة الاختبار</button>
-            </div>
-          </div>
-        `;
+    // Manual Flutter loading with error handling
+    let flutterLoaded = false;
+    let loadAttempts = 0;
+    const maxAttempts = 3;
+    
+    function loadFlutter() {
+      loadAttempts++;
+      console.log(`📱 Loading Flutter attempt ${loadAttempts}/${maxAttempts}`);
+      
+      // Remove existing script if any
+      const existingScript = document.querySelector('script[src*="flutter_bootstrap"]');
+      if (existingScript) {
+        existingScript.remove();
       }
-    }, 10000); // 10 seconds timeout
+      
+      // Create new script
+      const script = document.createElement('script');
+      script.src = 'flutter_bootstrap.js?v=1.0.1';
+      script.async = true;
+      
+      script.onload = () => {
+        console.log('✅ Flutter bootstrap loaded successfully');
+        flutterLoaded = true;
+        
+        // Wait a bit for Flutter to initialize
+        setTimeout(() => {
+          if (window._flutter && window._flutter.loader) {
+            console.log('🎯 Flutter engine found, initializing...');
+            window._flutter.loader.loadEntrypoint({
+              entrypointUrl: 'main.dart.js'
+            }).then(() => {
+              console.log('🎉 Flutter app loaded successfully');
+              // Remove splash screen
+              const splash = document.getElementById('splash');
+              if (splash) {
+                splash.style.display = 'none';
+              }
+            }).catch(error => {
+              console.error('❌ Flutter initialization failed:', error);
+              showError();
+            });
+          } else {
+            console.log('⏳ Waiting for Flutter engine...');
+            setTimeout(() => loadFlutter(), 1000);
+          }
+        }, 1000);
+      };
+      
+      script.onerror = () => {
+        console.error(`❌ Flutter bootstrap failed to load (attempt ${loadAttempts})`);
+        if (loadAttempts < maxAttempts) {
+          setTimeout(() => loadFlutter(), 2000);
+        } else {
+          showError();
+        }
+      };
+      
+      document.head.appendChild(script);
+    }
+    
+    function showError() {
+      console.log('❌ App failed to load, showing error');
+      document.body.innerHTML = `
+        <div style="
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+          font-family: Arial, sans-serif;
+          background: linear-gradient(135deg, #880404, #c20202);
+          color: white;
+          text-align: center;
+        ">
+          <div style="background: rgba(0,0,0,0.3); padding: 30px; border-radius: 10px;">
+            <h1>😔 عذرًا</h1>
+            <p>فشل تحميل التطبيق</p>
+            <p>يرجى المحاولة مرة أخرى</p>
+            <button onclick="window.location.reload()" style="
+              background: #4CAF50;
+              color: white;
+              border: none;
+              padding: 10px 20px;
+              border-radius: 5px;
+              cursor: pointer;
+              margin: 10px;
+            ">إعادة المحاولة</button>
+            <button onclick="window.location.href='../test.html'" style="
+              background: #2196F3;
+              color: white;
+              border: none;
+              padding: 10px 20px;
+              border-radius: 5px;
+              cursor: pointer;
+              margin: 10px;
+            ">صفحة الاختبار</button>
+            <button onclick="openConsole()" style="
+              background: #FF9800;
+              color: white;
+              border: none;
+              padding: 10px 20px;
+              border-radius: 5px;
+              cursor: pointer;
+              margin: 10px;
+            ">فتح Console</button>
+          </div>
+        </div>
+      `;
+    }
+    
+    function openConsole() {
+      alert('افتح Console (F12) لرؤية رسائل التصحيح');
+    }
+    
+    // Start loading Flutter
+    setTimeout(() => loadFlutter(), 1000);
+    
+    // Global timeout
+    setTimeout(() => {
+      if (!flutterLoaded) {
+        console.log('❌ App taking too long to load, showing error');
+        showError();
+      }
+    }, 15000); // 15 seconds timeout
   </script>
-  <script src="flutter_bootstrap.js?v=1.0.0" async=""></script>
-
-
 </body></html>
