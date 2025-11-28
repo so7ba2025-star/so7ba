@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Redirect to So7ba</title>
+    <script>
+        // Get the current URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const error = urlParams.get('error');
+        
+        // Build the new URL with parameters
+        let newUrl = '/so7ba/';
+        if (code || error) {
+            newUrl += '?' + window.location.search.substring(1);
+        }
+        
+        // Redirect to the correct subdirectory
+        window.location.href = newUrl;
+    </script>
+</head>
+<body>
+    <p>Redirecting to So7ba app...</p>
+</body>
+</html>
