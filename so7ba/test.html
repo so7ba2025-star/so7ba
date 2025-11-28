@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>So7ba Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #880404, #c20202);
+            color: white;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(0,0,0,0.3);
+            padding: 30px;
+            border-radius: 10px;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success { background: #4CAF50; }
+        .error { background: #f44336; }
+        .info { background: #2196F3; }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover { background: #45a049; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 So7ba - صفحة الاختبار</h1>
+        <p>هذه صفحة اختبار لتشخيص مشاكل التطبيق</p>
+        
+        <div id="status" class="status info">
+            جاري الفحص...
+        </div>
+        
+        <button onclick="checkFiles()">فحص الملفات</button>
+        <button onclick="checkFlutter()">فحص Flutter</button>
+        <button onclick="checkSupabase()">فحص Supabase</button>
+        <button onclick="goToApp()">فتح التطبيق</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+        
+        function checkFiles() {
+            updateStatus('جاري فحص الملفات...');
+            
+            const files = [
+                'flutter_bootstrap.js',
+                'main.dart.js',
+                'assets/AssetManifest.json',
+                'index.html'
+            ];
+            
+            files.forEach(file => {
+                fetch(file, { method: 'HEAD' })
+                    .then(response => {
+                        if (response.ok) {
+                            addResult(`✅ ${file} - موجود`, 'success');
+                        } else {
+                            addResult(`❌ ${file} - غير موجود (${response.status})`, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        addResult(`❌ ${file} - خطأ: ${error}`, 'error');
+                    });
+            });
+        }
+        
+        function checkFlutter() {
+            updateStatus('جاري فحص Flutter...');
+            
+            // Check if Flutter is loaded
+            if (window.flutter) {
+                addResult('✅ Flutter محمل', 'success');
+            } else {
+                addResult('❌ Flutter غير محمل', 'error');
+                
+                // Try to load Flutter manually
+                const script = document.createElement('script');
+                script.src = 'flutter_bootstrap.js';
+                script.onload = () => {
+                    addResult('✅ Flutter bootstrap تم تحميله', 'success');
+                };
+                script.onerror = () => {
+                    addResult('❌ Flutter bootstrap فشل في التحميل', 'error');
+                };
+                document.head.appendChild(script);
+            }
+        }
+        
+        function checkSupabase() {
+            updateStatus('جاري فحص Supabase...');
+            
+            // Check if Supabase scripts are loaded
+            if (window.supabase) {
+                addResult('✅ Supabase محمل', 'success');
+            } else {
+                addResult('❌ Supabase غير محمل', 'error');
+            }
+            
+            // Check Google Sign-In
+            if (window.google) {
+                addResult('✅ Google Sign-In محمل', 'success');
+            } else {
+                addResult('❌ Google Sign-In غير محمل', 'error');
+            }
+        }
+        
+        function goToApp() {
+            window.location.href = 'index.html';
+        }
+        
+        // Auto-check on load
+        window.addEventListener('load', function() {
+            updateStatus('تم التحميل - جاهز للاختبار', 'success');
+            addResult('🚀 صفحة الاختبار جاهزة', 'success');
+        });
+    </script>
+</body>
+</html>
