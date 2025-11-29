@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>So7ba Debug</title>
-    <base href="./">
+    <base href="/so7ba/">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -153,7 +153,7 @@
             updateStatus('جاري محاولة تحميل Flutter...');
             
             const script = document.createElement('script');
-            script.src = 'flutter_bootstrap.js?v=1.0.7';
+            script.src = 'flutter_bootstrap.js?v=1.0.4';
             script.onload = () => {
                 addResult('✅ Flutter bootstrap تم تحميله بنجاح', 'success');
                 
@@ -183,7 +183,7 @@
         }
         
         function goToApp() {
-            window.location.href = 'index_simple.html';
+            window.location.href = 'index.html';
         }
         
         // Auto-check on load
