@@ -632,18 +632,24 @@
       return (v ?? '').toString().trim();
     }
 
-    function getRoomGradeLevel(metadata) {
-      const m = metadata || {};
-      const grade = m.educational_level ?? m.grade_level ?? m.grade ?? '';
-      const s = normalizeStr(grade);
-      return s;
+    function getRoomGradeLevel(roomOrMeta) {
+      const m = roomOrMeta || {};
+      const meta = m.metadata || m;
+      const grade =
+        meta.educational_level ??
+        meta.grade_level ??
+        meta.grade ??
+        m.grade_level ??
+        m.educational_level ??
+        '';
+      return normalizeStr(grade);
     }
 
-    function getRoomEducationType(metadata) {
-      const m = metadata || {};
-      const type = m.education_type ?? m.subject ?? '';
-      const s = normalizeStr(type);
-      return s;
+    function getRoomEducationType(roomOrMeta) {
+      const m = roomOrMeta || {};
+      const meta = m.metadata || m;
+      const type = meta.education_type ?? meta.subject ?? m.education_type ?? '';
+      return normalizeStr(type);
     }
 
     function setRoomLogoPreview(url) {
@@ -995,9 +1001,8 @@
         setExcelStatus('لا توجد أسئلة جاهزة للرفع (أصلح الأخطاء أولاً)', 'error');
         return;
       }
-      const metadata = allowed?.metadata || {};
-      const gradeLevel = getRoomGradeLevel(metadata);
-      const educationType = getRoomEducationType(metadata);
+      const gradeLevel = getRoomGradeLevel(allowed);
+      const educationType = getRoomEducationType(allowed);
 
       if (!gradeLevel || !educationType) {
         setExcelStatus('بيانات الغرفة غير مكتملة (grade_level أو education_type مفقودة)', 'error');
@@ -1308,9 +1313,8 @@
         : '';
       renderRoomDetails(selected);
 
-      const metadata = selected?.metadata || {};
-      gradeLevelInput.value = getRoomGradeLevel(metadata);
-      educationTypeInput.value = getRoomEducationType(metadata);
+      gradeLevelInput.value = getRoomGradeLevel(selected);
+      educationTypeInput.value = getRoomEducationType(selected);
     }
 
     function updateCorrectAnswerOptions(optionsList) {
@@ -1393,9 +1397,8 @@
         return;
       }
 
-      const metadata = allowed?.metadata || {};
-      const gradeLevel = getRoomGradeLevel(metadata);
-      const educationType = getRoomEducationType(metadata);
+      const gradeLevel = getRoomGradeLevel(allowed);
+      const educationType = getRoomEducationType(allowed);
 
       const questionText = document.getElementById('question_text').value.trim();
       const questionType = questionTypeSelect.value;
@@ -1663,12 +1666,27 @@
       if (!language) {
         promptStatus.textContent = 'اختر لغة الأسئلة.';
         promptStatus.className = 'status inline error';
+        const gradeLevel = getRoomGradeLevel(allowed);
+        const educationType = getRoomEducationType(allowed);
+        const term = normalizeStr(termSelect.value) || 'term_1';
+
+        const promptText = buildPromptText({
+          subject,
+          unit,
+          lesson,
+          count,
+          language,
+          gradeLevel,
+          educationType,
+          createdBy: currentUser.id,
+          term,
+          year: 25,
+        });
         return;
       }
 
-      const metadata = allowed?.metadata || {};
-      const gradeLevel = getRoomGradeLevel(metadata);
-      const educationType = getRoomEducationType(metadata);
+      const gradeLevel = getRoomGradeLevel(allowed);
+      const educationType = getRoomEducationType(allowed);
       const term = normalizeStr(termSelect.value) || 'term_1';
 
       const promptText = buildPromptText({
