@@ -454,6 +454,7 @@
         <label for="excel-file">اختر ملف Excel (صفحة واحدة، أول صف هو أسماء الأعمدة)</label>
         <input id="excel-file" type="file" accept=".xlsx" />
         <div class="actions" style="margin-top:10px; gap:8px;">
+          <button type="button" id="download-template-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">تحميل قالب Excel</button>
           <button type="button" id="parse-excel-btn" style="background:#5f5f5f; box-shadow:none;">قراءة الملف</button>
           <button type="button" id="upload-excel-btn" style="display:none;">رفع كل الأسئلة</button>
         </div>
@@ -518,6 +519,7 @@
     const uploadExcelBtn = document.getElementById('upload-excel-btn');
     const excelStatus = document.getElementById('excel-status');
     const excelPreview = document.getElementById('excel-preview');
+    const downloadTemplateBtn = document.getElementById('download-template-btn');
 
     let currentUser = null;
     let allowedRooms = []; // { room_id, name, role, code, description, logo_url, host_id, metadata }
@@ -923,6 +925,30 @@
       parseExcelBtn.disabled = false;
     }
 
+    function handleDownloadTemplate() {
+      const headers = [
+        'question_text',
+        'question_type',
+        'option_a',
+        'option_b',
+        'option_c',
+        'option_d',
+        'correct_answer',
+        'difficulty',
+        'chapter',
+        'lesson',
+      ];
+      const sample = [
+        ['ما هو لون السماء؟', 'multiple_choice', 'أزرق', 'أحمر', 'أخضر', 'أصفر', 'أزرق', 1, 'الفصل 1', 'الدرس 1'],
+        ['الأرض كروية؟', 'true_false', '', '', '', '', 'صح', 1, 'الفصل 1', 'الدرس 2'],
+        ['اشرح قانون نيوتن الأول.', 'open', '', '', '', '', '—', 2, 'الفصل 2', 'الدرس 3'],
+      ];
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...sample]);
+      XLSX.utils.book_append_sheet(wb, ws, 'questions');
+      XLSX.writeFile(wb, 'questions_template.xlsx');
+    }
+
     async function fetchAllowedRooms() {
       roomsSelect.innerHTML = '';
       roomRole.textContent = '';
@@ -1312,6 +1338,7 @@
     tabQuestionsBtn.addEventListener('click', () => setActiveTab('questions'));
     parseExcelBtn.addEventListener('click', handleParseExcel);
     uploadExcelBtn.addEventListener('click', handleUploadExcel);
+    downloadTemplateBtn.addEventListener('click', handleDownloadTemplate);
 
     initSession();
     handleQuestionTypeChange();
