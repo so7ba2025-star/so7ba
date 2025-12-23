@@ -298,7 +298,7 @@
           <img src="assets/assets/Icon/n_app_icon.png" alt="So7ba logo" />
         </div>
         <div>
-          <h1>أحلى صحبة</h1>
+          <h1 id="brand-room-name">أحلى صحبة</h1>
           <p>مساعد الأسئلة - صلاحيات مالك/أدمن الغرفة فقط</p>
         </div>
       </div>
@@ -455,12 +455,21 @@
         <label for="excel-file">اختر ملف Excel (صفحة واحدة، أول صف هو أسماء الأعمدة)</label>
         <input id="excel-file" type="file" accept=".xlsx" />
         <div class="actions" style="margin-top:10px; gap:8px;">
-          <button type="button" id="download-template-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">تحميل قالب Excel</button>
+          <button type="button" id="download-template-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">تنزيل قالب (مثال) Excel</button>
           <button type="button" id="parse-excel-btn" style="background:#5f5f5f; box-shadow:none;">قراءة الملف</button>
           <button type="button" id="upload-excel-btn" style="display:none;">رفع كل الأسئلة</button>
         </div>
         <div id="excel-status" class="status muted" style="margin-top:8px;"></div>
         <div id="excel-preview"></div>
+
+        <div class="divider" style="margin:16px 0 8px;"></div>
+        <p class="title" style="font-size:16px; margin:0 0 6px;">أو لصق CSV مباشرة</p>
+        <p class="muted" style="margin:0 0 8px;">نفس الأعمدة: question_text, question_type, option_a/b/c/d, correct_answer, difficulty, chapter, lesson</p>
+        <textarea id="csv-textarea" rows="5" placeholder="الصق محتوى CSV هنا (أول صف هو العناوين)"></textarea>
+        <div class="actions" style="margin-top:8px; gap:8px;">
+          <button type="button" id="parse-csv-btn" style="background:#5f5f5f; box-shadow:none;">قراءة النص</button>
+          <button type="button" id="clear-csv-btn" class="ghost-btn">مسح النص</button>
+        </div>
       </div>
     </div>
           </div>
@@ -521,6 +530,9 @@
     const excelStatus = document.getElementById('excel-status');
     const excelPreview = document.getElementById('excel-preview');
     const downloadTemplateBtn = document.getElementById('download-template-btn');
+    const csvTextarea = document.getElementById('csv-textarea');
+    const parseCsvBtn = document.getElementById('parse-csv-btn');
+    const clearCsvBtn = document.getElementById('clear-csv-btn');
 
     let currentUser = null;
     let allowedRooms = []; // { room_id, name, role, code, description, logo_url, host_id, metadata }
@@ -897,7 +909,7 @@
           created_by: currentUser.id,
           question_text: q.question_text,
           question_type: q.question_type,
-          correct_answer: q.question_type === 'open' ? (q.correct_answer || '—') : q.correct_answer,
+          correct_answer: q.question_type === 'short_answer' || q.question_type === 'fill_in_blank' ? (q.correct_answer || '—') : q.correct_answer,
           options: q.options && q.options.length ? q.options : null,
           grade_level: gradeLevel,
           education_type: educationType,
@@ -917,7 +929,7 @@
       }
 
       if (fail.length) {
-        setExcelStatus(`تم رفع ${success} سؤال، أخطاء: ${fail.length} (أول خطأ: ${fail[0]})`, 'error');
+        setExcelStatus(`تم الرفع جزئياً: نجاح ${success}، فشل ${fail.length}. أول خطأ: ${fail[0]}`, 'error');
       } else {
         setExcelStatus(`تم رفع كل الأسئلة (${success}) بنجاح`, 'success');
         excelPreview.innerHTML = '';
@@ -926,6 +938,55 @@
       }
       uploadExcelBtn.disabled = false;
       parseExcelBtn.disabled = false;
+    }
+
+    function parseCsvText(text) {
+      // بسيط: يفصل الأسطر ثم الأعمدة بالـ comma أو semicolon أو tab
+      const lines = (text || '').trim().split(/\r?\n/).filter((l) => l.trim().length);
+      if (!lines.length) {
+        excelErrors = ['لا يوجد محتوى للقراءة'];
+        excelQuestions = [];
+        return;
+      }
+      const splitLine = (line) => {
+        // دعم ; أو , أو \t
+        const hasTab = line.includes('\t');
+        const hasSemicolon = line.includes(';');
+        if (hasTab) return line.split('\t');
+        if (hasSemicolon) return line.split(';');
+        return line.split(',');
+      };
+      const headerCells = splitLine(lines[0]).map((h) => h.trim().toLowerCase());
+      const rows = lines.slice(1).map((ln) => {
+        const cells = splitLine(ln);
+        const obj = {};
+        headerCells.forEach((h, i) => {
+          obj[h] = cells[i] ?? '';
+        });
+        return obj;
+      });
+      parseExcelRows(rows);
+    }
+
+    function handleParseCsv() {
+      setExcelStatus('جارٍ قراءة النص...', 'muted');
+      parseCsvText(csvTextarea.value);
+      setExcelStatus(
+        excelErrors.length
+          ? `تمت القراءة: ${excelQuestions.length} سؤال، أخطاء: ${excelErrors.length}`
+          : `تمت القراءة: ${excelQuestions.length} سؤال`,
+        excelErrors.length ? 'error' : 'success'
+      );
+      renderExcelPreview();
+    }
+
+    function handleClearCsv() {
+      csvTextarea.value = '';
+      setExcelStatus('تم مسح النص', 'muted');
+      excelPreview.innerHTML = '';
+      uploadExcelBtn.style.display = 'none';
+      excelQuestions = [];
+      excelErrors = [];
     }
 
     function handleDownloadTemplate() {
@@ -944,7 +1005,7 @@
       const sample = [
         ['ما هو لون السماء؟', 'multiple_choice', 'أزرق', 'أحمر', 'أخضر', 'أصفر', 'أزرق', 1, 'الفصل 1', 'الدرس 1'],
         ['الأرض كروية؟', 'true_false', '', '', '', '', 'صح', 1, 'الفصل 1', 'الدرس 2'],
-        ['اشرح قانون نيوتن الأول.', 'open', '', '', '', '', '—', 2, 'الفصل 2', 'الدرس 3'],
+        ['اشرح قانون نيوتن الأول.', 'short_answer', '', '', '', '', '—', 2, 'الفصل 2', 'الدرس 3'],
       ];
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet([headers, ...sample]);
