@@ -382,6 +382,7 @@
           <select id="question_type">
             <option value="multiple_choice">اختيار من متعدد</option>
             <option value="true_false">صح / خطأ</option>
+            <option value="fill_in_blank">املأ الفراغ</option>
             <option value="short_answer">إجابة قصيرة</option>
           </select>
         </div>
@@ -772,7 +773,7 @@
           excelErrors.push(`سطر ${line}: question_text فارغ`);
           return;
         }
-        if (!['multiple_choice', 'true_false', 'short_answer'].includes(questionType)) {
+        if (!['multiple_choice', 'true_false', 'fill_in_blank', 'short_answer'].includes(questionType)) {
           excelErrors.push(`سطر ${line}: question_type غير مدعوم (${questionType})`);
           return;
         }
@@ -797,7 +798,7 @@
             return;
           }
           correctAnswer = mapCorrectAnswer('true_false', correctAnswer);
-        } else if (questionType === 'short_answer') {
+        } else if (questionType === 'short_answer' || questionType === 'fill_in_blank') {
           if (!correctAnswer) correctAnswer = '—';
           options = [];
         } else {
@@ -1176,7 +1177,7 @@
 
     function handleQuestionTypeChange() {
       const questionType = questionTypeSelect.value;
-      if (questionType === 'short_answer') {
+      if (questionType === 'short_answer' || questionType === 'fill_in_blank') {
         optionsContainer.innerHTML = '';
         correctAnswerSelect.style.display = 'none';
         correctAnswerText.style.display = 'block';
@@ -1205,7 +1206,7 @@
         .map((i) => i.value.trim())
         .filter((v) => v);
       const correctAnswer =
-        questionType === 'short_answer'
+        questionType === 'short_answer' || questionType === 'fill_in_blank'
           ? correctAnswerText.value.trim()
           : correctAnswerSelect.value;
       const subject = normalizeStr(subjectSelect.value);
@@ -1244,7 +1245,7 @@
         created_by: currentUser.id,
         question_text: questionText,
         question_type: questionType,
-        correct_answer: questionType === 'short_answer' ? (correctAnswer || '—') : correctAnswer,
+        correct_answer: questionType === 'short_answer' || questionType === 'fill_in_blank' ? (correctAnswer || '—') : correctAnswer,
         options: options.length ? options : null,
         grade_level: gradeLevel || 'غير محدد',
         education_type: educationType || 'غير محدد',
