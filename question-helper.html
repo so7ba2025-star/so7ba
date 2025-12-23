@@ -63,6 +63,48 @@
       gap: 18px;
       align-items: start;
     }
+    .app-shell {
+      display: none;
+      grid-template-columns: 240px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .side {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 18px;
+      padding: 12px;
+      color: #fff;
+      position: sticky;
+      top: 18px;
+    }
+    .side-title {
+      margin: 6px 0 10px;
+      font-weight: 900;
+      font-size: 15px;
+      color: rgba(255,255,255,0.92);
+    }
+    .tab-btn {
+      width: 100%;
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.18);
+      color: #fff;
+      padding: 12px 12px;
+      border-radius: 14px;
+      font-weight: 900;
+      text-align: right;
+      box-shadow: none;
+    }
+    .tab-btn.active {
+      background: rgba(255,255,255,0.20);
+      border-color: rgba(255,255,255,0.35);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    @media (max-width: 900px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .side { position: relative; top: 0; }
+    }
     .bg-orbs {
       position: fixed;
       inset: 0;
@@ -257,46 +299,58 @@
         <div id="auth-status" class="status muted"></div>
       </div>
 
-      <div class="card" id="app-card" style="display:none; min-height: 180px;">
-        <p class="title">🧭 اختيار الغرفة المسموح بها</p>
-        <label for="rooms">غرفك التي تملكها أو أنت أدمن فيها</label>
-        <select id="rooms" style="min-height: 46px; font-size: 15px;"></select>
-        <p class="muted" id="room-role" style="margin-top:8px;"></p>
-        <div id="room-details" class="muted" style="margin-top:8px;"></div>
-        <div id="owner-edit" style="display:none; margin-top:12px;">
-          <div class="divider"></div>
-          <p class="title" style="font-size:16px; margin-bottom:8px;">✏️ تعديل بيانات الغرفة (مالك فقط)</p>
-          <label for="room_name_edit">اسم الغرفة</label>
-          <input id="room_name_edit" type="text" placeholder="أدخل الاسم الجديد" />
+      <div class="app-shell" id="app-shell">
+        <aside class="side">
+          <div class="side-title">القائمة</div>
+          <div class="actions" style="flex-direction:column;">
+            <button type="button" id="tab-room" class="tab-btn active">بيانات الغرفة</button>
+            <button type="button" id="tab-questions" class="tab-btn">الأسئلة</button>
+          </div>
+        </aside>
 
-          <label for="room_desc_edit">وصف الغرفة</label>
-          <textarea id="room_desc_edit" placeholder="اكتب وصف الغرفة..."></textarea>
+        <div>
+          <div id="panel-room" class="tab-panel active">
+            <div class="card" id="app-card" style="min-height: 180px;">
+              <p class="title">🧭 بيانات الغرفة</p>
+              <label for="rooms">غرفك التي تملكها أو أنت أدمن فيها</label>
+              <select id="rooms" style="min-height: 46px; font-size: 15px;"></select>
+              <p class="muted" id="room-role" style="margin-top:8px;"></p>
+              <div id="room-details" class="muted" style="margin-top:8px;"></div>
+              <div id="owner-edit" style="display:none; margin-top:12px;">
+                <div class="divider"></div>
+                <p class="title" style="font-size:16px; margin-bottom:8px;">✏️ تعديل بيانات الغرفة (مالك فقط)</p>
+                <label for="room_name_edit">اسم الغرفة</label>
+                <input id="room_name_edit" type="text" placeholder="أدخل الاسم الجديد" />
 
-          <label>صورة الغرفة</label>
-          <div class="room-preview" style="margin-top:6px;">
-            <img id="room_logo_preview" src="" alt="صورة الغرفة" style="display:none;" onerror="this.style.display='none';" />
-            <div id="room_logo_empty" class="badge">لا توجد صورة</div>
-            <div style="width:100%">
-              <label for="room_logo_library" class="muted" style="margin-top:0;">اختر من المكتبة</label>
-              <select id="room_logo_library" style="min-height: 46px; font-size: 15px;"></select>
-              <label for="room_logo_file" class="muted" style="margin-top:8px;">أو ارفع صورة من الكمبيوتر</label>
-              <input id="room_logo_file" type="file" accept="image/*" />
-              <div class="actions" style="margin-top:8px;">
-                <button type="button" id="upload-room-logo-btn" style="background:#5f5f5f; box-shadow:none;">رفع الصورة</button>
-                <button type="button" id="remove-room-logo-btn" class="ghost-btn">حذف الصورة</button>
+                <label for="room_desc_edit">وصف الغرفة</label>
+                <textarea id="room_desc_edit" placeholder="اكتب وصف الغرفة..."></textarea>
+
+                <label>صورة الغرفة</label>
+                <div class="room-preview" style="margin-top:6px;">
+                  <img id="room_logo_preview" src="" alt="صورة الغرفة" style="display:none;" onerror="this.style.display='none';" />
+                  <div id="room_logo_empty" class="badge">لا توجد صورة</div>
+                  <div style="width:100%">
+                    <label for="room_logo_library" class="muted" style="margin-top:0;">اختر من المكتبة</label>
+                    <select id="room_logo_library" style="min-height: 46px; font-size: 15px;"></select>
+                    <label for="room_logo_file" class="muted" style="margin-top:8px;">أو ارفع صورة من الكمبيوتر</label>
+                    <input id="room_logo_file" type="file" accept="image/*" />
+                    <div class="actions" style="margin-top:8px;">
+                      <button type="button" id="upload-room-logo-btn" style="background:#5f5f5f; box-shadow:none;">رفع الصورة</button>
+                      <button type="button" id="remove-room-logo-btn" class="ghost-btn">حذف الصورة</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="actions" style="margin-top:10px;">
+                  <button type="button" id="save-room-btn">حفظ التعديلات</button>
+                  <span class="muted">لن يتم التغيير إلا إذا كنت المالك.</span>
+                </div>
+                <div id="room-edit-status" class="status muted"></div>
               </div>
             </div>
           </div>
-          <div class="actions" style="margin-top:10px;">
-            <button type="button" id="save-room-btn">حفظ التعديلات</button>
-            <span class="muted">لن يتم التغيير إلا إذا كنت المالك.</span>
-          </div>
-          <div id="room-edit-status" class="status muted"></div>
-        </div>
-      </div>
-    </div>
 
-    <div class="card" id="question-card" style="display:none; margin-top:16px;">
+          <div id="panel-questions" class="tab-panel">
+            <div class="card" id="question-card" style="margin-top:0;">
       <p class="title">✍️ إضافة سؤال</p>
       <label for="question_text">نص السؤال</label>
       <textarea id="question_text" placeholder="اكتب السؤال هنا"></textarea>
@@ -373,6 +427,10 @@
       </div>
       <div id="submit-status" class="status"></div>
     </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -382,6 +440,7 @@
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const authCard = document.getElementById('auth-card');
+    const appShell = document.getElementById('app-shell');
     const appCard = document.getElementById('app-card');
     const questionCard = document.getElementById('question-card');
     const googleBtn = document.getElementById('google-btn');
@@ -415,6 +474,11 @@
     const termSelect = document.getElementById('term');
     const gradeLevelInput = document.getElementById('grade_level');
     const educationTypeInput = document.getElementById('education_type');
+
+    const tabRoomBtn = document.getElementById('tab-room');
+    const tabQuestionsBtn = document.getElementById('tab-questions');
+    const panelRoom = document.getElementById('panel-room');
+    const panelQuestions = document.getElementById('panel-questions');
 
     let currentUser = null;
     let allowedRooms = []; // { room_id, name, role, code, description, logo_url, host_id, metadata }
@@ -612,11 +676,18 @@
       allowedRooms = [];
       roomsSelect.innerHTML = '';
       authCard.style.display = 'block';
-      appCard.style.display = 'none';
-      questionCard.style.display = 'none';
+      appShell.style.display = 'none';
       logoutBtn.style.display = 'none';
       logoutBtnTop.style.display = 'none';
       setStatus(authStatus, 'تم تسجيل الخروج', 'muted');
+    }
+
+    function setActiveTab(which) {
+      const isRoom = which === 'room';
+      tabRoomBtn.classList.toggle('active', isRoom);
+      tabQuestionsBtn.classList.toggle('active', !isRoom);
+      panelRoom.classList.toggle('active', isRoom);
+      panelQuestions.classList.toggle('active', !isRoom);
     }
 
     async function fetchAllowedRooms() {
@@ -706,15 +777,14 @@
 
       if (!allowedRooms.length) {
         roomsSelect.innerHTML = '<option value="">لا توجد غرف لديك صلاحية عليها</option>';
-        questionCard.style.display = 'none';
+        // اترك تبويب الأسئلة متاحاً لكن لن يتم قبول الإرسال بدون غرفة
         setStatus(authStatus, 'لا توجد غرف تملكها أو أنت أدمن فيها', 'error');
         return;
       }
 
-      // تأكيد إظهار الكروت بعد النجاح
+      // تأكيد إظهار الواجهة بعد النجاح
       authCard.style.display = 'none';
-      appCard.style.display = 'block';
-      questionCard.style.display = 'block';
+      appShell.style.display = 'grid';
 
       rebuildRoomOptions();
       updateRoomRole();
@@ -984,12 +1054,13 @@
 
     async function onLoginSuccess() {
       authCard.style.display = 'none';
-      appCard.style.display = 'block';
+      appShell.style.display = 'grid';
       logoutBtn.style.display = 'inline-flex';
       logoutBtnTop.style.display = 'inline-flex';
       setStatus(authStatus, 'مسجل كـ ' + (currentUser?.email || ''), 'success');
       await loadSubjects();
       await fetchAllowedRooms();
+      setActiveTab('room');
     }
 
     googleBtn.addEventListener('click', loginWithGoogle);
@@ -1004,6 +1075,8 @@
     roomLogoLibrary.addEventListener('change', () => setRoomLogoPreview(roomLogoLibrary.value));
     removeRoomLogoBtn.addEventListener('click', () => setRoomLogoPreview(null));
     addSubjectBtn.addEventListener('click', addSubject);
+    tabRoomBtn.addEventListener('click', () => setActiveTab('room'));
+    tabQuestionsBtn.addEventListener('click', () => setActiveTab('questions'));
 
     initSession();
     handleQuestionTypeChange();
