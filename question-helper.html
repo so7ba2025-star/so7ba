@@ -45,6 +45,14 @@
       position: relative;
       z-index: 1;
     }
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
     .hero {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -160,12 +168,13 @@
     .actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .ghost-btn {
       background: transparent;
-      border: 1px solid rgba(0,0,0,0.08);
+      border: 1px solid rgba(255,255,255,0.25);
       color: #fff;
       padding: 10px 14px;
       border-radius: 10px;
       font-weight: 800;
       box-shadow: none;
+      backdrop-filter: blur(6px);
     }
     .google-btn {
       background: #f5f5dc;
@@ -182,15 +191,25 @@
   </style>
 </head>
 <body>
+  <div class="bg-orbs">
+    <div class="orb small one"></div>
+    <div class="orb medium two"></div>
+    <div class="orb medium three"></div>
+    <div class="orb large four"></div>
+  </div>
+
   <div class="shell">
-    <div class="brand">
-      <div class="logo-box">
-        <img src="assets/assets/Icon/n_app_icon.png" alt="So7ba logo" />
+    <div class="header-row">
+      <div class="brand">
+        <div class="logo-box">
+          <img src="assets/assets/Icon/n_app_icon.png" alt="So7ba logo" />
+        </div>
+        <div>
+          <h1>أحلى صحبة</h1>
+          <p>مساعد الأسئلة - صلاحيات مالك/أدمن الغرفة فقط</p>
+        </div>
       </div>
-      <div>
-        <h1>أحلى صحبة</h1>
-        <p>مساعد الأسئلة - صلاحيات مالك/أدمن الغرفة فقط</p>
-      </div>
+      <button id="logout-btn-top" class="ghost-btn" style="display:none;">تسجيل خروج</button>
     </div>
 
     <div class="hero">
@@ -294,6 +313,7 @@
     const questionCard = document.getElementById('question-card');
     const googleBtn = document.getElementById('google-btn');
     const logoutBtn = document.getElementById('logout-btn');
+    const logoutBtnTop = document.getElementById('logout-btn-top');
     const authStatus = document.getElementById('auth-status');
     const roomsSelect = document.getElementById('rooms');
     const roomRole = document.getElementById('room-role');
@@ -345,6 +365,7 @@
       appCard.style.display = 'none';
       questionCard.style.display = 'none';
       logoutBtn.style.display = 'none';
+      logoutBtnTop.style.display = 'none';
       setStatus(authStatus, 'تم تسجيل الخروج', 'muted');
     }
 
@@ -480,12 +501,14 @@
       authCard.style.display = 'none';
       appCard.style.display = 'block';
       logoutBtn.style.display = 'inline-flex';
+      logoutBtnTop.style.display = 'inline-flex';
       setStatus(authStatus, 'مسجل كـ ' + (currentUser?.email || ''), 'success');
       await fetchAllowedRooms();
     }
 
     googleBtn.addEventListener('click', loginWithGoogle);
     logoutBtn.addEventListener('click', logout);
+    logoutBtnTop.addEventListener('click', logout);
     roomsSelect.addEventListener('change', updateRoomRole);
     submitBtn.addEventListener('click', submitQuestion);
 
