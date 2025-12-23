@@ -265,11 +265,28 @@
         <div id="room-details" class="muted" style="margin-top:8px;"></div>
         <div id="owner-edit" style="display:none; margin-top:12px;">
           <div class="divider"></div>
-          <p class="title" style="font-size:16px; margin-bottom:8px;">✏️ تعديل الاسم / الصورة (مالك فقط)</p>
+          <p class="title" style="font-size:16px; margin-bottom:8px;">✏️ تعديل بيانات الغرفة (مالك فقط)</p>
           <label for="room_name_edit">اسم الغرفة</label>
           <input id="room_name_edit" type="text" placeholder="أدخل الاسم الجديد" />
-          <label for="room_logo_edit">رابط صورة الغرفة (URL)</label>
-          <input id="room_logo_edit" type="url" placeholder="https://example.com/logo.png" />
+
+          <label for="room_desc_edit">وصف الغرفة</label>
+          <textarea id="room_desc_edit" placeholder="اكتب وصف الغرفة..."></textarea>
+
+          <label>صورة الغرفة</label>
+          <div class="room-preview" style="margin-top:6px;">
+            <img id="room_logo_preview" src="" alt="صورة الغرفة" style="display:none;" onerror="this.style.display='none';" />
+            <div id="room_logo_empty" class="badge">لا توجد صورة</div>
+            <div style="width:100%">
+              <label for="room_logo_library" class="muted" style="margin-top:0;">اختر من المكتبة</label>
+              <select id="room_logo_library" style="min-height: 46px; font-size: 15px;"></select>
+              <label for="room_logo_file" class="muted" style="margin-top:8px;">أو ارفع صورة من الكمبيوتر</label>
+              <input id="room_logo_file" type="file" accept="image/*" />
+              <div class="actions" style="margin-top:8px;">
+                <button type="button" id="upload-room-logo-btn" style="background:#5f5f5f; box-shadow:none;">رفع الصورة</button>
+                <button type="button" id="remove-room-logo-btn" class="ghost-btn">حذف الصورة</button>
+              </div>
+            </div>
+          </div>
           <div class="actions" style="margin-top:10px;">
             <button type="button" id="save-room-btn">حفظ التعديلات</button>
             <span class="muted">لن يتم التغيير إلا إذا كنت المالك.</span>
@@ -316,11 +333,17 @@
       <div class="row">
         <div>
           <label for="subject">المادة</label>
-          <input id="subject" type="text" placeholder="مثال: رياضيات" />
+          <div class="actions" style="gap:8px; align-items: stretch;">
+            <select id="subject" style="flex:1; min-height: 46px; font-size: 15px;"></select>
+            <button type="button" id="add-subject-btn" style="min-width:46px; background:#5f5f5f; box-shadow:none;">+</button>
+          </div>
         </div>
         <div>
           <label for="term">الترم</label>
-          <input id="term" type="text" placeholder="مثال: الأول" />
+          <select id="term" style="min-height: 46px; font-size: 15px;">
+            <option value="term_1">term_1</option>
+            <option value="term_2">term_2</option>
+          </select>
         </div>
       </div>
       <div class="row">
@@ -336,11 +359,11 @@
       <div class="row">
         <div>
           <label for="grade_level">الصف الدراسي</label>
-          <input id="grade_level" type="text" placeholder="مثال: الصف الثالث" />
+          <input id="grade_level" type="text" placeholder="مثال: الصف الثالث" disabled />
         </div>
         <div>
           <label for="education_type">نوع التعليم</label>
-          <input id="education_type" type="text" placeholder="مثال: عام / لغات" />
+          <input id="education_type" type="text" placeholder="مثال: عام / لغات" disabled />
         </div>
       </div>
 
@@ -377,12 +400,178 @@
     const roomDetails = document.getElementById('room-details');
     const ownerEdit = document.getElementById('owner-edit');
     const roomNameEdit = document.getElementById('room_name_edit');
-    const roomLogoEdit = document.getElementById('room_logo_edit');
+    const roomDescEdit = document.getElementById('room_desc_edit');
+    const roomLogoPreview = document.getElementById('room_logo_preview');
+    const roomLogoEmpty = document.getElementById('room_logo_empty');
+    const roomLogoLibrary = document.getElementById('room_logo_library');
+    const roomLogoFile = document.getElementById('room_logo_file');
+    const uploadRoomLogoBtn = document.getElementById('upload-room-logo-btn');
+    const removeRoomLogoBtn = document.getElementById('remove-room-logo-btn');
     const roomEditStatus = document.getElementById('room-edit-status');
     const saveRoomBtn = document.getElementById('save-room-btn');
 
+    const subjectSelect = document.getElementById('subject');
+    const addSubjectBtn = document.getElementById('add-subject-btn');
+    const termSelect = document.getElementById('term');
+    const gradeLevelInput = document.getElementById('grade_level');
+    const educationTypeInput = document.getElementById('education_type');
+
     let currentUser = null;
-    let allowedRooms = []; // { room_id, name, role, code, description, logo_url, host_id }
+    let allowedRooms = []; // { room_id, name, role, code, description, logo_url, host_id, metadata }
+    let subjects = []; // { id, name }
+    let selectedRoomLogoUrl = null;
+
+    const ROOM_LOGO_BUCKET = 'room-assets';
+
+    function normalizeStr(v) {
+      return (v ?? '').toString().trim();
+    }
+
+    function getRoomGradeLevel(metadata) {
+      const m = metadata || {};
+      const grade = m.educational_level ?? m.grade_level ?? m.grade ?? '';
+      const s = normalizeStr(grade);
+      return s || 'غير محدد';
+    }
+
+    function getRoomEducationType(metadata) {
+      const m = metadata || {};
+      const type = m.education_type ?? m.subject ?? '';
+      const s = normalizeStr(type);
+      return s || 'غير محدد';
+    }
+
+    function setRoomLogoPreview(url) {
+      const u = normalizeStr(url);
+      selectedRoomLogoUrl = u || null;
+      if (u) {
+        roomLogoPreview.src = u;
+        roomLogoPreview.style.display = 'block';
+        roomLogoEmpty.style.display = 'none';
+      } else {
+        roomLogoPreview.removeAttribute('src');
+        roomLogoPreview.style.display = 'none';
+        roomLogoEmpty.style.display = 'inline-flex';
+      }
+    }
+
+    async function loadRoomLogoLibrary(roomId) {
+      roomLogoLibrary.innerHTML = '';
+      const first = document.createElement('option');
+      first.value = '';
+      first.textContent = '— اختر من المكتبة —';
+      roomLogoLibrary.appendChild(first);
+
+      try {
+        const folder = `room_logos/${roomId}`;
+        const { data, error } = await client.storage
+          .from(ROOM_LOGO_BUCKET)
+          .list(folder, { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+        if (error) {
+          console.warn('[room_logo] list error', error);
+          return;
+        }
+        (data || []).forEach((obj) => {
+          if (!obj?.name) return;
+          const path = `${folder}/${obj.name}`;
+          const url = client.storage.from(ROOM_LOGO_BUCKET).getPublicUrl(path)?.data?.publicUrl;
+          const opt = document.createElement('option');
+          opt.value = url || '';
+          opt.textContent = obj.name;
+          roomLogoLibrary.appendChild(opt);
+        });
+      } catch (e) {
+        console.warn('[room_logo] list failed', e);
+      }
+    }
+
+    async function uploadRoomLogo() {
+      const selected = allowedRooms.find((r) => r.room_id === roomsSelect.value);
+      if (!selected || selected.role !== 'owner') {
+        setStatus(roomEditStatus, 'رفع الصورة مسموح للمالك فقط', 'error');
+        return;
+      }
+      const file = roomLogoFile.files?.[0];
+      if (!file) {
+        setStatus(roomEditStatus, 'اختر صورة أولاً', 'error');
+        return;
+      }
+      const maxSize = 6 * 1024 * 1024;
+      if (file.size > maxSize) {
+        setStatus(roomEditStatus, 'حجم الصورة كبير (أقصى 6MB)', 'error');
+        return;
+      }
+      uploadRoomLogoBtn.disabled = true;
+      setStatus(roomEditStatus, 'جارٍ رفع الصورة...', 'muted');
+      try {
+        const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+        const safeExt = ext.replace(/[^a-z0-9]/g, '') || 'png';
+        const path = `room_logos/${selected.room_id}/${Date.now()}.${safeExt}`;
+        const { error } = await client.storage
+          .from(ROOM_LOGO_BUCKET)
+          .upload(path, file, { upsert: true, contentType: file.type || 'image/png' });
+        if (error) {
+          setStatus(roomEditStatus, 'فشل رفع الصورة: ' + error.message, 'error');
+          return;
+        }
+        const publicUrl = client.storage.from(ROOM_LOGO_BUCKET).getPublicUrl(path)?.data?.publicUrl;
+        setRoomLogoPreview(publicUrl || null);
+        await loadRoomLogoLibrary(selected.room_id);
+        setStatus(roomEditStatus, 'تم رفع الصورة (اضغط حفظ لتحديث الغرفة)', 'success');
+      } catch (e) {
+        setStatus(roomEditStatus, 'فشل رفع الصورة: ' + (e?.message || e), 'error');
+      } finally {
+        uploadRoomLogoBtn.disabled = false;
+      }
+    }
+
+    async function loadSubjects() {
+      subjects = [];
+      subjectSelect.innerHTML = '';
+      const opt0 = document.createElement('option');
+      opt0.value = '';
+      opt0.textContent = '— اختر المادة —';
+      subjectSelect.appendChild(opt0);
+      try {
+        const { data, error } = await client
+          .from('subjects')
+          .select('id, name')
+          .eq('is_active', true)
+          .order('name');
+        if (error) {
+          console.warn('[subjects] load error', error);
+          return;
+        }
+        subjects = (data || []).map((s) => ({ id: s.id, name: s.name }));
+        subjects.forEach((s) => {
+          const o = document.createElement('option');
+          o.value = s.name;
+          o.textContent = s.name;
+          subjectSelect.appendChild(o);
+        });
+      } catch (e) {
+        console.warn('[subjects] load failed', e);
+      }
+    }
+
+    async function addSubject() {
+      const name = normalizeStr(prompt('اسم المادة الجديدة:'));
+      if (!name) return;
+      addSubjectBtn.disabled = true;
+      try {
+        const { error } = await client.from('subjects').insert({ name, is_active: true });
+        if (error) {
+          alert('فشل إضافة المادة: ' + error.message);
+          return;
+        }
+        await loadSubjects();
+        subjectSelect.value = name;
+      } catch (e) {
+        alert('فشل إضافة المادة: ' + (e?.message || e));
+      } finally {
+        addSubjectBtn.disabled = false;
+      }
+    }
 
     function setStatus(el, msg, kind = 'muted') {
       el.textContent = msg || '';
@@ -443,7 +632,7 @@
       try {
         const { data: joinData, error: joinError } = await client
           .from('room_members')
-          .select('room_id, role, rooms(id, name, code, description, logo_url, host_id)')
+          .select('room_id, role, rooms(id, name, code, description, logo_url, host_id, metadata)')
           .eq('user_id', currentUser.id)
           .in('role', ['owner', 'admin']);
         if (joinError) {
@@ -458,6 +647,7 @@
               description: d.rooms?.description,
               logo_url: d.rooms?.logo_url,
               host_id: d.rooms?.host_id,
+              metadata: d.rooms?.metadata,
             }))
             .filter((r) => r.id);
         }
@@ -480,7 +670,7 @@
         try {
           const { data: info, error: roomsInfoError } = await client
             .from('rooms')
-            .select('id, name, code, description, logo_url, host_id')
+            .select('id, name, code, description, logo_url, host_id, metadata')
             .in('id', memberData.map((m) => m.room_id));
           if (roomsInfoError) {
             console.warn('[rooms] roomsInfoError', roomsInfoError);
@@ -507,6 +697,7 @@
           description: found?.description,
           logo_url: found?.logo_url,
           host_id: found?.host_id,
+          metadata: found?.metadata,
         });
       });
 
@@ -575,8 +766,10 @@
       if (selected.role === 'owner') {
         ownerEdit.style.display = 'block';
         roomNameEdit.value = selected.name || '';
-        roomLogoEdit.value = selected.logo_url || '';
-        setStatus(roomEditStatus, 'يمكنك تعديل الاسم أو الصورة كمالك', 'muted');
+        roomDescEdit.value = selected.description || '';
+        setRoomLogoPreview(selected.logo_url || null);
+        loadRoomLogoLibrary(selected.room_id);
+        setStatus(roomEditStatus, 'يمكنك تعديل الاسم / الوصف / الصورة كمالك', 'muted');
       } else {
         ownerEdit.style.display = 'none';
       }
@@ -588,6 +781,10 @@
         ? `دورك في هذه الغرفة: ${selected.role === 'owner' ? 'مالك' : 'أدمن'}`
         : '';
       renderRoomDetails(selected);
+
+      const metadata = selected?.metadata || {};
+      gradeLevelInput.value = getRoomGradeLevel(metadata);
+      educationTypeInput.value = getRoomEducationType(metadata);
     }
 
     function updateCorrectAnswerOptions(optionsList) {
@@ -680,12 +877,12 @@
         questionType === 'open'
           ? correctAnswerText.value.trim()
           : correctAnswerSelect.value;
-      const subject = document.getElementById('subject').value.trim();
-      const term = document.getElementById('term').value.trim();
+      const subject = normalizeStr(subjectSelect.value);
+      const term = normalizeStr(termSelect.value);
       const chapter = document.getElementById('chapter').value.trim();
       const lesson = document.getElementById('lesson').value.trim();
-      const gradeLevel = document.getElementById('grade_level').value.trim() || 'غير محدد';
-      const educationType = document.getElementById('education_type').value.trim() || 'غير محدد';
+      const gradeLevel = normalizeStr(gradeLevelInput.value) || 'غير محدد';
+      const educationType = normalizeStr(educationTypeInput.value) || 'غير محدد';
 
       if (!questionText) {
         setStatus(submitStatus, 'أدخل نص السؤال', 'error');
@@ -731,8 +928,11 @@
       const { error } = await client.from('quiz_questions').insert(payload);
       // حتى مع الأخطاء نكمل بما توفر
       document.getElementById('question_text').value = '';
-      document.getElementById('options').value = '';
-      document.getElementById('correct_answer').value = '';
+      if (questionType === 'open') {
+        correctAnswerText.value = '';
+      }
+      document.getElementById('chapter').value = '';
+      document.getElementById('lesson').value = '';
       if (error) {
         setStatus(submitStatus, 'فشل الرفع: ' + error.message, 'error');
       } else {
@@ -749,7 +949,8 @@
       }
 
       const newName = roomNameEdit.value.trim();
-      const newLogo = roomLogoEdit.value.trim();
+      const newDesc = roomDescEdit.value.trim();
+      const newLogo = normalizeStr(selectedRoomLogoUrl);
 
       if (!newName) {
         setStatus(roomEditStatus, 'أدخل اسم الغرفة', 'error');
@@ -761,7 +962,7 @@
 
       const { error } = await client
         .from('rooms')
-        .update({ name: newName, logo_url: newLogo || null })
+        .update({ name: newName, description: newDesc || null, logo_url: newLogo || null })
         .eq('id', selected.room_id)
         .eq('host_id', currentUser.id);
 
@@ -771,7 +972,7 @@
         // حدّث النسخة المحلية وأعد بناء الخيارات/التفاصيل
         allowedRooms = allowedRooms.map((r) =>
           r.room_id === selected.room_id
-            ? { ...r, name: newName, logo_url: newLogo || null }
+            ? { ...r, name: newName, description: newDesc || null, logo_url: newLogo || null }
             : r
         );
         rebuildRoomOptions();
@@ -787,6 +988,7 @@
       logoutBtn.style.display = 'inline-flex';
       logoutBtnTop.style.display = 'inline-flex';
       setStatus(authStatus, 'مسجل كـ ' + (currentUser?.email || ''), 'success');
+      await loadSubjects();
       await fetchAllowedRooms();
     }
 
@@ -798,6 +1000,10 @@
     addOptionBtn.addEventListener('click', () => addOptionField('', true));
     questionTypeSelect.addEventListener('change', handleQuestionTypeChange);
     saveRoomBtn.addEventListener('click', updateRoomInfo);
+    uploadRoomLogoBtn.addEventListener('click', uploadRoomLogo);
+    roomLogoLibrary.addEventListener('change', () => setRoomLogoPreview(roomLogoLibrary.value));
+    removeRoomLogoBtn.addEventListener('click', () => setRoomLogoPreview(null));
+    addSubjectBtn.addEventListener('click', addSubject);
 
     initSession();
     handleQuestionTypeChange();
