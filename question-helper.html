@@ -381,10 +381,10 @@
         .select('id, name, created_by')
         .eq('created_by', currentUser.id);
 
-      // 2) الغرف التي هو فيها Owner/Admin عبر room_members
+      // 2) الغرف التي هو فيها Owner/Admin عبر room_members (بدون join لتجنب فشل العلاقات)
       const memberPromise = client
         .from('room_members')
-        .select('room_id, role, rooms(name, created_by)')
+        .select('room_id, role')
         .eq('user_id', currentUser.id)
         .in('role', ['owner', 'admin']);
 
@@ -412,13 +412,36 @@
       });
 
       (memberData || []).forEach((m) => {
+        // لو كان هو مالك أيضاً، نحتفظ بدور المالك
+        const existing = roomsMap.get(m.room_id);
+        const role = existing?.role === 'owner' ? 'owner' : m.role;
         roomsMap.set(m.room_id, {
           room_id: m.room_id,
-          name: m.rooms?.name || m.room_id,
-          role: m.role,
-          created_by: m.rooms?.created_by,
+          name: existing?.name || m.room_id,
+          role,
+          created_by: existing?.created_by,
         });
       });
+
+      // جلب أسماء الغرف الناقصة (إن لم تكن مملوكة)
+      const missingIds = Array.from(roomsMap.values())
+        .filter((r) => !r.name || r.name === r.room_id)
+        .map((r) => r.room_id);
+      if (missingIds.length) {
+        const { data: roomsInfo } = await client
+          .from('rooms')
+          .select('id, name, created_by')
+          .in('id', missingIds);
+        (roomsInfo || []).forEach((r) => {
+          const existing = roomsMap.get(r.id);
+          roomsMap.set(r.id, {
+            room_id: r.id,
+            name: r.name || r.id,
+            role: existing?.role ?? 'admin',
+            created_by: r.created_by,
+          });
+        });
+      }
 
       allowedRooms = Array.from(roomsMap.values());
 
