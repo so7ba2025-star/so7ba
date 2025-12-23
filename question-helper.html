@@ -524,6 +524,7 @@
     const tabQuestionsBtn = document.getElementById('tab-questions');
     const panelRoom = document.getElementById('panel-room');
     const panelQuestions = document.getElementById('panel-questions');
+    const brandRoomName = document.getElementById('brand-room-name');
     const excelFileInput = document.getElementById('excel-file');
     const parseExcelBtn = document.getElementById('parse-excel-btn');
     const uploadExcelBtn = document.getElementById('upload-excel-btn');
@@ -1131,6 +1132,7 @@
       if (!selected) {
         roomDetails.innerHTML = '';
         ownerEdit.style.display = 'none';
+        if (brandRoomName) brandRoomName.textContent = 'أحلى صحبة';
         return;
       }
 
@@ -1139,6 +1141,10 @@
       const code = selected.code || '—';
       const roleText = selected.role === 'owner' ? 'مالك' : 'أدمن';
       const logo = selected.logo_url || '';
+      if (brandRoomName) {
+        const friendly = selected.name && selected.name !== selected.room_id ? selected.name : selected.room_id;
+        brandRoomName.textContent = friendly || 'أحلى صحبة';
+      }
 
       roomDetails.innerHTML = `
         <div class="room-preview">
