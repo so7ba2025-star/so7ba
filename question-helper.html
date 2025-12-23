@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مساعد الأسئلة - أحلى صحبة</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <script src="https://unpkg.com/@supabase/supabase-js@2" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --bg: #0f0b0b;
+      --bg-2: #c20202;
+      --card: #ffffff;
+      --accent: #9a4a1a;
+      --accent-2: #f0c38e;
+      --text: #2f241f;
+      --muted: #6b5b52;
+      --border: #e2d5c5;
+      --success: #0f9d58;
+      --error: #d93025;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.12), transparent 26%),
+                  radial-gradient(circle at 80% 10%, rgba(255,255,255,0.09), transparent 24%),
+                  linear-gradient(135deg, #880404, #c20202);
+      font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+    .shell {
+      width: min(1200px, 100%);
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 24px;
+      padding: 18px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 18px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+    }
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 900;
+      font-size: 20px;
+      color: #8a0303;
+      margin: 0 0 12px 0;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    .logo-box {
+      width: 96px;
+      height: 96px;
+      border-radius: 28px;
+      background: #f5f5dc;
+      display: grid;
+      place-items: center;
+      box-shadow:
+        0 18px 34px rgba(0,0,0,0.18),
+        0 0 0 8px rgba(255,255,255,0.14);
+    }
+    .logo-box img {
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+    }
+    .brand h1 {
+      color: #fff;
+      margin: 0;
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 0.3px;
+    }
+    .brand p {
+      color: rgba(255,255,255,0.82);
+      margin: 4px 0 0;
+      font-weight: 600;
+    }
+    label { font-weight: 800; display: block; margin: 12px 0 6px; color: var(--text); }
+    input, select, textarea {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font-size: 14px;
+      background: #fff;
+      box-sizing: border-box;
+    }
+    textarea { min-height: 96px; resize: vertical; }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    button {
+      background: linear-gradient(120deg, var(--accent), #c2652b);
+      color: #fff;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .12s ease, box-shadow .12s ease;
+      box-shadow: 0 10px 20px rgba(154,74,26,0.25);
+    }
+    button:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
+    button:hover:not(:disabled) { transform: translateY(-1px); }
+    .muted { color: var(--muted); font-size: 13px; }
+    .status { margin-top: 8px; font-weight: 800; }
+    .success { color: var(--success); }
+    .error { color: var(--error); }
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 8px; background: var(--accent-2); color: var(--text); font-weight: 700; font-size: 12px; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .ghost-btn {
+      background: transparent;
+      border: 1px solid rgba(0,0,0,0.08);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 800;
+      box-shadow: none;
+    }
+    .google-btn {
+      background: #f5f5dc;
+      color: #444;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+      border: 1px solid rgba(0,0,0,0.06);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+    }
+    .google-btn img { width: 18px; height: 18px; }
+    @media (max-width: 640px) { body { padding: 12px; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="brand">
+      <div class="logo-box">
+        <img src="assets/icon/n_app_icon.png" alt="So7ba logo" />
+      </div>
+      <div>
+        <h1>أحلى صحبة</h1>
+        <p>مساعد الأسئلة - صلاحيات مالك/أدمن الغرفة فقط</p>
+      </div>
+    </div>
+
+    <div class="hero">
+      <div class="card" id="auth-card">
+        <p class="title">🚪 تسجيل الدخول</p>
+        <button class="google-btn" id="google-btn">
+          <img src="assets/icon/google_logo.png" alt="Google logo" />
+          <span>دخول باستخدام جوجل</span>
+        </button>
+        <p class="muted" style="margin:6px 0 12px;">بنفس حساب التطبيق</p>
+
+        <div class="actions" style="margin-top:8px;">
+          <button id="logout-btn" class="ghost-btn" style="display:none;">تسجيل خروج</button>
+        </div>
+        <div id="auth-status" class="status muted"></div>
+      </div>
+
+      <div class="card" id="app-card" style="display:none;">
+        <p class="title">🧭 اختيار الغرفة المسموح بها</p>
+        <label for="rooms">غرفك التي تملكها أو أنت أدمن فيها</label>
+        <select id="rooms"></select>
+        <p class="muted" id="room-role"></p>
+      </div>
+    </div>
+
+    <div class="card" id="question-card" style="display:none; margin-top:16px;">
+      <p class="title">✍️ إضافة سؤال</p>
+      <label for="question_text">نص السؤال</label>
+      <textarea id="question_text" placeholder="اكتب السؤال هنا"></textarea>
+
+      <div class="row">
+        <div>
+          <label for="question_type">نوع السؤال</label>
+          <select id="question_type">
+            <option value="multiple_choice">اختيار من متعدد</option>
+            <option value="true_false">صح / خطأ</option>
+            <option value="open">مقالي / مفتوح</option>
+          </select>
+        </div>
+        <div>
+          <label for="difficulty">درجة الصعوبة (1-5)</label>
+          <input id="difficulty" type="number" min="1" max="5" value="1" />
+        </div>
+      </div>
+
+      <label for="options">الاختيارات (سطر لكل اختيار) - مطلوب لـ "اختيار من متعدد" أو "صح/خطأ"</label>
+      <textarea id="options" placeholder="مثال:
+أ - الإجابة الأولى
+ب - الإجابة الثانية"></textarea>
+
+      <label for="correct_answer">الإجابة الصحيحة</label>
+      <input id="correct_answer" type="text" placeholder="اكتب الإجابة الصحيحة" />
+
+      <div class="row">
+        <div>
+          <label for="subject">المادة</label>
+          <input id="subject" type="text" placeholder="مثال: رياضيات" />
+        </div>
+        <div>
+          <label for="term">الترم</label>
+          <input id="term" type="text" placeholder="مثال: الأول" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="chapter">الفصل</label>
+          <input id="chapter" type="text" />
+        </div>
+        <div>
+          <label for="lesson">الدرس</label>
+          <input id="lesson" type="text" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="grade_level">الصف الدراسي</label>
+          <input id="grade_level" type="text" placeholder="مثال: الصف الثالث" />
+        </div>
+        <div>
+          <label for="education_type">نوع التعليم</label>
+          <input id="education_type" type="text" placeholder="مثال: عام / لغات" />
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:12px;">
+        <button id="submit-btn">رفع السؤال</button>
+        <span class="muted" id="helper-text">سيتم الرفع للغرفة المحددة فقط، مع تحقق صلاحية Owner/Admin.</span>
+      </div>
+      <div id="submit-status" class="status"></div>
+    </div>
+  </div>
+
+  <script>
+    // مفاتيح Supabase (نفس العامة في التطبيق)
+    const SUPABASE_URL = 'https://hredzoouykvmoczrtugy.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyZWR6b291eWt2bW9jenJ0dWd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNDI2MzAsImV4cCI6MjA3NzgxODYzMH0.4frhZ21FaYyEkrKap7XH74GsaREfbJts_xz77jULqoc';
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const authCard = document.getElementById('auth-card');
+    const appCard = document.getElementById('app-card');
+    const questionCard = document.getElementById('question-card');
+    const googleBtn = document.getElementById('google-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const authStatus = document.getElementById('auth-status');
+    const roomsSelect = document.getElementById('rooms');
+    const roomRole = document.getElementById('room-role');
+    const submitBtn = document.getElementById('submit-btn');
+    const submitStatus = document.getElementById('submit-status');
+
+    let currentUser = null;
+    let allowedRooms = []; // { room_id, name, role }
+
+    function setStatus(el, msg, kind = 'muted') {
+      el.textContent = msg || '';
+      el.className = `status ${kind}`;
+    }
+
+    async function initSession() {
+      const { data } = await client.auth.getSession();
+      if (data.session) {
+        currentUser = data.session.user;
+        onLoginSuccess();
+      }
+    }
+
+    async function loginWithGoogle() {
+      setStatus(authStatus, 'جارٍ فتح جوجل...', 'muted');
+      googleBtn.disabled = true;
+      try {
+        await client.auth.signOut(); // نظافة قبل التدفق
+        const redirectUrl = window.location.origin + window.location.pathname;
+        await client.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: redirectUrl,
+            queryParams: { prompt: 'select_account' },
+          },
+        });
+        // على الويب، سيتم إعادة التوجيه وإكمال الجلسة تلقائياً
+      } catch (e) {
+        setStatus(authStatus, 'فشل جوجل: ' + (e?.message || e), 'error');
+        googleBtn.disabled = false;
+      }
+    }
+
+    async function logout() {
+      await client.auth.signOut();
+      currentUser = null;
+      allowedRooms = [];
+      roomsSelect.innerHTML = '';
+      authCard.style.display = 'block';
+      appCard.style.display = 'none';
+      questionCard.style.display = 'none';
+      logoutBtn.style.display = 'none';
+      setStatus(authStatus, 'تم تسجيل الخروج', 'muted');
+    }
+
+    async function fetchAllowedRooms() {
+      roomsSelect.innerHTML = '';
+      roomRole.textContent = '';
+      allowedRooms = [];
+      if (!currentUser) return;
+      // جلب الغرف التي المستخدم فيها Owner/Admin فقط
+      const { data, error } = await client
+        .from('room_members')
+        .select('room_id, role, rooms(name, created_by)')
+        .eq('user_id', currentUser.id)
+        .in('role', ['owner', 'admin']);
+
+      if (error) {
+        setStatus(authStatus, 'فشل تحميل الغرف: ' + error.message, 'error');
+        return;
+      }
+
+      allowedRooms = (data || []).map((m) => ({
+        room_id: m.room_id,
+        name: m.rooms?.name || m.room_id,
+        role: m.role,
+        created_by: m.rooms?.created_by,
+      }));
+
+      if (!allowedRooms.length) {
+        roomsSelect.innerHTML = '<option value="">لا توجد غرف لديك صلاحية عليها</option>';
+        questionCard.style.display = 'none';
+        setStatus(authStatus, 'لا توجد غرف تملكها أو أنت أدمن فيها', 'error');
+        return;
+      }
+
+      for (const room of allowedRooms) {
+        const opt = document.createElement('option');
+        opt.value = room.room_id;
+        opt.textContent = `${room.name} (${room.role === 'owner' ? 'مالك' : 'أدمن'})`;
+        roomsSelect.appendChild(opt);
+      }
+      updateRoomRole();
+      questionCard.style.display = 'block';
+    }
+
+    function updateRoomRole() {
+      const selected = allowedRooms.find((r) => r.room_id === roomsSelect.value);
+      roomRole.textContent = selected
+        ? `دورك في هذه الغرفة: ${selected.role === 'owner' ? 'مالك' : 'أدمن'}`
+        : '';
+    }
+
+    async function submitQuestion() {
+      submitBtn.disabled = true;
+      setStatus(submitStatus, 'جارٍ الرفع...', 'muted');
+
+      const roomId = roomsSelect.value;
+      const allowed = allowedRooms.find((r) => r.room_id === roomId);
+      if (!allowed) {
+        setStatus(submitStatus, 'ليست لديك صلاحية على هذه الغرفة', 'error');
+        submitBtn.disabled = false;
+        return;
+      }
+
+      const questionText = document.getElementById('question_text').value.trim();
+      const questionType = document.getElementById('question_type').value;
+      const difficulty = Number(document.getElementById('difficulty').value || 1);
+      const optionsRaw = document.getElementById('options').value.trim();
+      const correctAnswer = document.getElementById('correct_answer').value.trim();
+      const subject = document.getElementById('subject').value.trim();
+      const term = document.getElementById('term').value.trim();
+      const chapter = document.getElementById('chapter').value.trim();
+      const lesson = document.getElementById('lesson').value.trim();
+      const gradeLevel = document.getElementById('grade_level').value.trim() || 'غير محدد';
+      const educationType = document.getElementById('education_type').value.trim() || 'غير محدد';
+
+      if (!questionText) {
+        setStatus(submitStatus, 'أدخل نص السؤال', 'error');
+        submitBtn.disabled = false;
+        return;
+      }
+
+      let options = [];
+      if (questionType === 'multiple_choice' || questionType === 'true_false') {
+        options = optionsRaw
+          .split('\n')
+          .map((o) => o.trim())
+          .filter((o) => o.length > 0);
+        if (questionType === 'true_false' && options.length === 0) {
+          options = ['صح', 'خطأ'];
+        }
+        if (options.length < 2) {
+          setStatus(submitStatus, 'أدخل اختيارين على الأقل', 'error');
+          submitBtn.disabled = false;
+          return;
+        }
+        if (!correctAnswer) {
+          setStatus(submitStatus, 'أدخل الإجابة الصحيحة', 'error');
+          submitBtn.disabled = false;
+          return;
+        }
+      }
+
+      const payload = {
+        room_id: roomId,
+        created_by: currentUser.id,
+        question_text: questionText,
+        question_type: questionType,
+        correct_answer: questionType === 'open' ? (correctAnswer || '—') : correctAnswer,
+        options: options.length ? options : null,
+        grade_level: gradeLevel || 'غير محدد',
+        education_type: educationType || 'غير محدد',
+        subject: subject || 'غير محدد',
+        term: term || 'غير محدد',
+        chapter: chapter || null,
+        lesson: lesson || null,
+        difficulty: isNaN(difficulty) ? 1 : Math.max(1, Math.min(5, difficulty)),
+        is_active: true,
+      };
+
+      const { error } = await client.from('quiz_questions').insert(payload);
+      if (error) {
+        setStatus(submitStatus, 'فشل الرفع: ' + error.message, 'error');
+      } else {
+        setStatus(submitStatus, 'تم إضافة السؤال بنجاح', 'success');
+        document.getElementById('question_text').value = '';
+        document.getElementById('options').value = '';
+        document.getElementById('correct_answer').value = '';
+      }
+      submitBtn.disabled = false;
+    }
+
+    async function onLoginSuccess() {
+      authCard.style.display = 'none';
+      appCard.style.display = 'block';
+      logoutBtn.style.display = 'inline-flex';
+      setStatus(authStatus, 'مسجل كـ ' + (currentUser?.email || ''), 'success');
+      await fetchAllowedRooms();
+    }
+
+    googleBtn.addEventListener('click', loginWithGoogle);
+    logoutBtn.addEventListener('click', logout);
+    roomsSelect.addEventListener('change', updateRoomRole);
+    submitBtn.addEventListener('click', submitQuestion);
+
+    initSession();
+  </script>
+</body>
+</html>
