@@ -1242,7 +1242,7 @@
           const { data: profilesData, error: profilesError } = await client
             .from('user_profiles')
             .select('id, avatar_url, nickname, nickname_discriminator')
-            .inFilter('id', userIds);
+            .in('id', userIds);
 
           if (!profilesError) {
             (Array.isArray(profilesData) ? profilesData : []).forEach((p) => {
