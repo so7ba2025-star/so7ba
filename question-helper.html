@@ -389,19 +389,14 @@
         .eq('user_id', currentUser.id)
         .in('role', ['owner', 'admin']);
 
-      const [{ data: ownerData, error: ownerError }, { data: memberData, error: memberError }] =
+      const [{ data: ownerDataRaw, error: ownerError }, { data: memberDataRaw, error: memberError }] =
         await Promise.all([ownerPromise, memberPromise]);
+      const ownerData = ownerError ? [] : (ownerDataRaw ?? []);
+      const memberData = memberError ? [] : (memberDataRaw ?? []);
+      if (ownerError) console.warn('[rooms] ownerError (متجاهَل، سنكمل بالعضوية فقط)', ownerError);
+      if (memberError) console.warn('[rooms] memberError (متجاهَل، سنكمل بما توفر)', memberError);
       console.log('[rooms] ownerData', ownerData);
       console.log('[rooms] memberData', memberData);
-
-      if (ownerError) {
-        setStatus(authStatus, 'فشل تحميل غرف المالك: ' + ownerError.message, 'error');
-        return;
-      }
-      if (memberError) {
-        setStatus(authStatus, 'فشل تحميل غرف العضوية: ' + memberError.message, 'error');
-        return;
-      }
 
       const roomsMap = new Map();
 
@@ -431,19 +426,27 @@
         .filter((r) => !r.name || r.name === r.room_id)
         .map((r) => r.room_id);
       if (missingIds.length) {
-        const { data: roomsInfo } = await client
-          .from('rooms')
-          .select('id, name, created_by')
-          .in('id', missingIds);
-        (roomsInfo || []).forEach((r) => {
-          const existing = roomsMap.get(r.id);
-          roomsMap.set(r.id, {
-            room_id: r.id,
-            name: r.name || r.id,
-            role: existing?.role ?? 'admin',
-            created_by: r.created_by,
-          });
-        });
+        try {
+          const { data: roomsInfo, error: roomsInfoError } = await client
+            .from('rooms')
+            .select('id, name, created_by')
+            .in('id', missingIds);
+          if (roomsInfoError) {
+            console.warn('[rooms] roomsInfoError', roomsInfoError);
+          } else {
+            (roomsInfo || []).forEach((r) => {
+              const existing = roomsMap.get(r.id);
+              roomsMap.set(r.id, {
+                room_id: r.id,
+                name: r.name || r.id,
+                role: existing?.role ?? 'admin',
+                created_by: r.created_by,
+              });
+            });
+          }
+        } catch (e) {
+          console.warn('[rooms] roomsInfo fetch failed', e);
+        }
       }
 
       allowedRooms = Array.from(roomsMap.values());
@@ -542,13 +545,14 @@
       };
 
       const { error } = await client.from('quiz_questions').insert(payload);
+      // حتى مع الأخطاء نكمل بما توفر
+      document.getElementById('question_text').value = '';
+      document.getElementById('options').value = '';
+      document.getElementById('correct_answer').value = '';
       if (error) {
         setStatus(submitStatus, 'فشل الرفع: ' + error.message, 'error');
       } else {
         setStatus(submitStatus, 'تم إضافة السؤال بنجاح', 'success');
-        document.getElementById('question_text').value = '';
-        document.getElementById('options').value = '';
-        document.getElementById('correct_answer').value = '';
       }
       submitBtn.disabled = false;
     }
