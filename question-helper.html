@@ -57,6 +57,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 18px;
+      align-items: start;
     }
     .bg-orbs {
       position: fixed;
@@ -227,11 +228,11 @@
         <div id="auth-status" class="status muted"></div>
       </div>
 
-      <div class="card" id="app-card" style="display:none;">
+      <div class="card" id="app-card" style="display:none; min-height: 180px;">
         <p class="title">🧭 اختيار الغرفة المسموح بها</p>
         <label for="rooms">غرفك التي تملكها أو أنت أدمن فيها</label>
-        <select id="rooms"></select>
-        <p class="muted" id="room-role"></p>
+        <select id="rooms" style="min-height: 46px; font-size: 15px;"></select>
+        <p class="muted" id="room-role" style="margin-top:8px;"></p>
       </div>
     </div>
 
