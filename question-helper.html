@@ -382,7 +382,7 @@
           <select id="question_type">
             <option value="multiple_choice">اختيار من متعدد</option>
             <option value="true_false">صح / خطأ</option>
-            <option value="open">مقالي / مفتوح</option>
+            <option value="short_answer">إجابة قصيرة</option>
           </select>
         </div>
         <div>
@@ -772,7 +772,7 @@
           excelErrors.push(`سطر ${line}: question_text فارغ`);
           return;
         }
-        if (!['multiple_choice', 'true_false', 'open'].includes(questionType)) {
+        if (!['multiple_choice', 'true_false', 'short_answer'].includes(questionType)) {
           excelErrors.push(`سطر ${line}: question_type غير مدعوم (${questionType})`);
           return;
         }
@@ -797,10 +797,12 @@
             return;
           }
           correctAnswer = mapCorrectAnswer('true_false', correctAnswer);
-        } else {
-          // open
+        } else if (questionType === 'short_answer') {
           if (!correctAnswer) correctAnswer = '—';
           options = [];
+        } else {
+          excelErrors.push(`سطر ${line}: نوع غير معروف (${questionType})`);
+          return;
         }
 
         const difficulty = isNaN(difficultyRaw) ? 1 : Math.max(1, Math.min(5, difficultyRaw));
@@ -1174,7 +1176,7 @@
 
     function handleQuestionTypeChange() {
       const questionType = questionTypeSelect.value;
-      if (questionType === 'open') {
+      if (questionType === 'short_answer') {
         optionsContainer.innerHTML = '';
         correctAnswerSelect.style.display = 'none';
         correctAnswerText.style.display = 'block';
@@ -1203,7 +1205,7 @@
         .map((i) => i.value.trim())
         .filter((v) => v);
       const correctAnswer =
-        questionType === 'open'
+        questionType === 'short_answer'
           ? correctAnswerText.value.trim()
           : correctAnswerSelect.value;
       const subject = normalizeStr(subjectSelect.value);
@@ -1242,7 +1244,7 @@
         created_by: currentUser.id,
         question_text: questionText,
         question_type: questionType,
-        correct_answer: questionType === 'open' ? (correctAnswer || '—') : correctAnswer,
+        correct_answer: questionType === 'short_answer' ? (correctAnswer || '—') : correctAnswer,
         options: options.length ? options : null,
         grade_level: gradeLevel || 'غير محدد',
         education_type: educationType || 'غير محدد',
