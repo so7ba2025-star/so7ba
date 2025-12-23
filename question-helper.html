@@ -947,6 +947,9 @@
       const errors = excelErrors.length;
       const sample = excelQuestions.slice(0, 5);
       let html = `<div class=\"status ${errors ? 'error' : 'success'}\">تم تجهيز ${total} سؤال${errors ? `، أخطاء: ${errors}` : ''}</div>`;
+      if (errors && total > 0) {
+        html += `<div class=\"muted\" style=\"margin-top:6px; font-weight:800;\">سيتم رفع السطور السليمة فقط عند الضغط على زر الرفع.</div>`;
+      }
       if (errors) {
         const firstErrors = excelErrors.slice(0, 5).map((e) => `<li>${e}</li>`).join('');
         html += `<p class=\"muted\" style=\"margin:6px 0 4px;\">أول الأخطاء:</p><ul class=\"muted\" style=\"margin:0 0 8px 0; padding-left:16px;\">${firstErrors}</ul>`;
@@ -959,7 +962,7 @@
         html += `</tbody></table>`;
       }
       excelPreview.innerHTML = html;
-      uploadExcelBtn.style.display = total > 0 && !errors ? 'inline-flex' : 'none';
+      uploadExcelBtn.style.display = total > 0 ? 'inline-flex' : 'none';
     }
 
     function setExcelStatus(msg, variant = 'muted') {
@@ -997,8 +1000,8 @@
         setExcelStatus('ليست لديك صلاحية على هذه الغرفة', 'error');
         return;
       }
-      if (!excelQuestions.length || excelErrors.length) {
-        setExcelStatus('لا توجد أسئلة جاهزة للرفع (أصلح الأخطاء أولاً)', 'error');
+      if (!excelQuestions.length) {
+        setExcelStatus('لا توجد أسئلة سليمة جاهزة للرفع', 'error');
         return;
       }
       const gradeLevel = getRoomGradeLevel(allowed);
@@ -1011,7 +1014,11 @@
 
       uploadExcelBtn.disabled = true;
       parseExcelBtn.disabled = true;
-      setExcelStatus('جارٍ رفع الدفعة...', 'muted');
+      if (excelErrors.length) {
+        setExcelStatus(`سيتم رفع ${excelQuestions.length} سؤال فقط وتجاهل ${excelErrors.length} سطر به أخطاء...`, 'muted');
+      } else {
+        setExcelStatus('جارٍ رفع الدفعة...', 'muted');
+      }
 
       let success = 0;
       const fail = [];
