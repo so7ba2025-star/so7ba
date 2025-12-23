@@ -512,6 +512,46 @@
     </div>
   </div>
 
+  <!-- Prompt Modal -->
+  <div id="prompt-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px;">
+        <h3 style="margin:0;">توليد برومبت AI</h3>
+        <button id="close-prompt-modal-btn" class="ghost-btn" style="min-width: auto; padding:6px 10px;">إغلاق</button>
+      </div>
+      <div class="modal-grid">
+        <div>
+          <label for="prompt-subject">المادة *</label>
+          <input id="prompt-subject" type="text" placeholder="مثال: اللغة العربية" />
+        </div>
+        <div>
+          <label for="prompt-unit">الوحدة *</label>
+          <input id="prompt-unit" type="text" placeholder="مثال: علم وقيم" />
+        </div>
+        <div>
+          <label for="prompt-lesson">الدرس *</label>
+          <input id="prompt-lesson" type="text" placeholder="مثال: التاء والهاء" />
+        </div>
+        <div>
+          <label for="prompt-count">عدد الأسئلة *</label>
+          <input id="prompt-count" type="number" min="1" value="10" />
+        </div>
+        <div>
+          <label for="prompt-language">لغة الأسئلة *</label>
+          <select id="prompt-language">
+            <option value="">اختر</option>
+            <option value="arabic">Arabic</option>
+            <option value="english">English</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <div id="prompt-status" class="status inline muted" style="margin-right:auto;"></div>
+        <button type="button" id="copy-prompt-btn" style="background:#5f5f5f; box-shadow:none;">Copy the prompt</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // مفاتيح Supabase (نفس العامة في التطبيق)
     const SUPABASE_URL = 'https://hredzoouykvmoczrtugy.supabase.co';
@@ -551,6 +591,16 @@
     const subjectSelect = document.getElementById('subject');
     const addSubjectBtn = document.getElementById('add-subject-btn');
     const termSelect = document.getElementById('term');
+    const openPromptModalBtn = document.getElementById('open-prompt-modal-btn');
+    const promptModal = document.getElementById('prompt-modal');
+    const promptSubject = document.getElementById('prompt-subject');
+    const promptUnit = document.getElementById('prompt-unit');
+    const promptLesson = document.getElementById('prompt-lesson');
+    const promptCount = document.getElementById('prompt-count');
+    const promptLanguage = document.getElementById('prompt-language');
+    const copyPromptBtn = document.getElementById('copy-prompt-btn');
+    const closePromptModalBtn = document.getElementById('close-prompt-modal-btn');
+    const promptStatus = document.getElementById('prompt-status');
     const gradeLevelInput = document.getElementById('grade_level');
     const educationTypeInput = document.getElementById('education_type');
 
@@ -586,14 +636,14 @@
       const m = metadata || {};
       const grade = m.educational_level ?? m.grade_level ?? m.grade ?? '';
       const s = normalizeStr(grade);
-      return s || 'غير محدد';
+      return s;
     }
 
     function getRoomEducationType(metadata) {
       const m = metadata || {};
       const type = m.education_type ?? m.subject ?? '';
       const s = normalizeStr(type);
-      return s || 'غير محدد';
+      return s;
     }
 
     function setRoomLogoPreview(url) {
@@ -846,7 +896,10 @@
           }
           correctAnswer = mapCorrectAnswer('true_false', correctAnswer);
         } else if (questionType === 'short_answer' || questionType === 'fill_in_blank') {
-          if (!correctAnswer) correctAnswer = '—';
+          if (!correctAnswer) {
+            excelErrors.push(`سطر ${line}: correct_answer مطلوب لهذا النوع (${questionType})`);
+            return;
+          }
           options = [];
         } else {
           excelErrors.push(`سطر ${line}: نوع غير معروف (${questionType})`);
@@ -926,11 +979,26 @@
         setExcelStatus('لا توجد أسئلة جاهزة للرفع (أصلح الأخطاء أولاً)', 'error');
         return;
       }
-      const subject = normalizeStr(subjectSelect.value) || 'غير محدد';
-      const term = normalizeStr(termSelect.value) || 'غير محدد';
       const metadata = allowed?.metadata || {};
       const gradeLevel = getRoomGradeLevel(metadata);
       const educationType = getRoomEducationType(metadata);
+      const roomSubject = normalizeStr(metadata.subject);
+      const roomTerm = normalizeStr(metadata.term);
+      const subject = normalizeStr(subjectSelect.value) || roomSubject;
+      const term = normalizeStr(termSelect.value) || roomTerm;
+
+      if (!subject) {
+        setExcelStatus('اختر المادة من بيانات الغرفة أولاً', 'error');
+        return;
+      }
+      if (!term) {
+        setExcelStatus('اختر الترم/الفصل أولاً', 'error');
+        return;
+      }
+      if (!gradeLevel || !educationType) {
+        setExcelStatus('بيانات الغرفة غير مكتملة (grade_level أو education_type مفقودة)', 'error');
+        return;
+      }
 
       uploadExcelBtn.disabled = true;
       parseExcelBtn.disabled = true;
@@ -945,7 +1013,7 @@
           created_by: currentUser.id,
           question_text: q.question_text,
           question_type: q.question_type,
-          correct_answer: q.question_type === 'short_answer' || q.question_type === 'fill_in_blank' ? (q.correct_answer || '—') : q.correct_answer,
+          correct_answer: q.question_type === 'short_answer' || q.question_type === 'fill_in_blank' ? q.correct_answer : q.correct_answer,
           options: q.options && q.options.length ? q.options : null,
           grade_level: gradeLevel,
           education_type: educationType,
@@ -1325,6 +1393,21 @@
         submitBtn.disabled = false;
         return;
       }
+      if (!subject) {
+        setStatus(submitStatus, 'اختر المادة أولاً', 'error');
+        submitBtn.disabled = false;
+        return;
+      }
+      if (!term) {
+        setStatus(submitStatus, 'اختر الترم/الفصل أولاً', 'error');
+        submitBtn.disabled = false;
+        return;
+      }
+      if (!gradeLevel || !educationType) {
+        setStatus(submitStatus, 'بيانات الغرفة ناقصة (grade_level أو education_type)', 'error');
+        submitBtn.disabled = false;
+        return;
+      }
 
       let options = [];
       if (questionType === 'multiple_choice' || questionType === 'true_false') {
@@ -1343,13 +1426,18 @@
           return;
         }
       }
+      if ((questionType === 'short_answer' || questionType === 'fill_in_blank') && !correctAnswer) {
+        setStatus(submitStatus, 'أدخل الإجابة الصحيحة', 'error');
+        submitBtn.disabled = false;
+        return;
+      }
 
       const payload = {
         room_id: roomId,
         created_by: currentUser.id,
         question_text: questionText,
         question_type: questionType,
-        correct_answer: questionType === 'short_answer' || questionType === 'fill_in_blank' ? (correctAnswer || '—') : correctAnswer,
+        correct_answer: correctAnswer,
         options: options.length ? options : null,
         grade_level: gradeLevel,
         education_type: educationType,
@@ -1436,7 +1524,7 @@
     submitBtn.addEventListener('click', submitQuestion);
     addOptionBtn.addEventListener('click', () => addOptionField('', true));
     questionTypeSelect.addEventListener('change', handleQuestionTypeChange);
-    saveRoomBtn.addEventListener('click', updateRoomInfo);
+    parseExcelBtn.addEventListener('click', handleParseExcel);
     uploadRoomLogoBtn.addEventListener('click', uploadRoomLogo);
     roomLogoLibrary.addEventListener('change', () => setRoomLogoPreview(roomLogoLibrary.value));
     removeRoomLogoBtn.addEventListener('click', () => setRoomLogoPreview(null));
