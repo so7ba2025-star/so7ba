@@ -396,23 +396,48 @@
       allowedRooms = [];
       if (!currentUser) return;
 
-      // الغرف التي هو فيها Owner/Admin عبر room_members (بدون join لتجنب فشل العلاقات)
-      const { data: memberDataRaw, error: memberError } = await client
-        .from('room_members')
-        .select('room_id, role')
-        .eq('user_id', currentUser.id)
-        .in('role', ['owner', 'admin']);
-      const memberData = memberError ? [] : (memberDataRaw ?? []);
-      if (memberError) console.warn('[rooms] memberError (متجاهَل، سنكمل بما توفر)', memberError);
-      console.log('[rooms] memberData', memberData);
-
-      // جلب أسماء الغرف بالـ room_id التي لدينا
+      let memberData = [];
       let roomsInfo = [];
-      if (memberData.length) {
+
+      // محاولة باستخدام join لجلب الأسماء مباشرة
+      try {
+        const { data: joinData, error: joinError } = await client
+          .from('room_members')
+          .select('room_id, role, rooms(id, name, created_by)')
+          .eq('user_id', currentUser.id)
+          .in('role', ['owner', 'admin']);
+        if (joinError) {
+          console.warn('[rooms] joinError, fallback to separate fetch', joinError);
+        } else if (joinData) {
+          memberData = joinData;
+          roomsInfo = joinData
+            .map((d) => ({
+              id: d.room_id,
+              name: d.rooms?.name,
+              created_by: d.rooms?.created_by,
+            }))
+            .filter((r) => r.id);
+        }
+      } catch (e) {
+        console.warn('[rooms] join fetch failed, fallback', e);
+      }
+
+      // لو فشل الـ join أو لم يُرجع أسماء، نجلب room_members ثم rooms بالأيديهات
+      if (!memberData.length) {
+        const { data: memberDataRaw, error: memberError } = await client
+          .from('room_members')
+          .select('room_id, role')
+          .eq('user_id', currentUser.id)
+          .in('role', ['owner', 'admin']);
+        memberData = memberError ? [] : (memberDataRaw ?? []);
+        if (memberError) console.warn('[rooms] memberError (متجاهَل، سنكمل بما توفر)', memberError);
+      }
+
+      if (!roomsInfo.length && memberData.length) {
         try {
           const { data: info, error: roomsInfoError } = await client
             .from('rooms')
-            .select('id, name, created_by')
+            .select('id, name, host_id')
             .in('id', memberData.map((m) => m.room_id));
           if (roomsInfoError) {
             console.warn('[rooms] roomsInfoError', roomsInfoError);
@@ -424,15 +449,18 @@
         }
       }
 
+      console.log('[rooms] memberData', memberData);
+      console.log('[rooms] roomsInfo', roomsInfo);
+
       const roomsMap = new Map();
 
       (memberData || []).forEach((m) => {
         const found = roomsInfo.find((r) => r.id === m.room_id);
         roomsMap.set(m.room_id, {
           room_id: m.room_id,
-          name: found?.name || m.room_id,
+          name: found?.name || '', // سنعرض الاسم فقط، أو نتركه فارغ لو لم يتوفر
           role: m.role,
-          created_by: found?.created_by,
+          created_by: found?.host_id,
         });
       });
 
