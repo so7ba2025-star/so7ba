@@ -268,9 +268,9 @@
     .badge { display: inline-block; padding: 4px 8px; border-radius: 8px; background: var(--accent-2); color: var(--text); font-weight: 700; font-size: 12px; }
     .actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .ghost-btn {
-      background: transparent;
-      border: 1px solid rgba(255,255,255,0.25);
-      color: #fff;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(47,36,31,0.22);
+      color: var(--text);
       padding: 10px 14px;
       border-radius: 10px;
       font-weight: 800;
@@ -501,7 +501,7 @@
         <textarea id="csv-textarea" rows="5" placeholder="الصق محتوى CSV هنا (أول صف هو العناوين)"></textarea>
         <div class="actions" style="margin-top:8px; gap:8px;">
           <button type="button" id="parse-csv-btn" style="background:#5f5f5f; box-shadow:none;">قراءة النص</button>
-          <button type="button" id="clear-csv-btn" class="ghost-btn">مسح النص</button>
+          <button type="button" id="clear-csv-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">مسح النص</button>
           <button type="button" id="open-prompt-modal-btn" class="ghost-btn" style="margin-right:auto; color:#2f241f; border-color:#c6b299;">Generate AI Prompt</button>
         </div>
       </div>
@@ -1060,7 +1060,7 @@
       parseExcelBtn.disabled = false;
     }
 
-    function parseCsvText(text) {
+    function parseCsvText(text, fallbackSubject, fallbackTerm) {
       // بسيط: يفصل الأسطر ثم الأعمدة بالـ comma أو semicolon أو tab
       const lines = (text || '').trim().split(/\r?\n/).filter((l) => l.trim().length);
       if (!lines.length) {
@@ -1077,12 +1077,16 @@
         return line.split(',');
       };
       const headerCells = splitLine(lines[0]).map((h) => h.trim().toLowerCase());
+      const hasSubject = headerCells.includes('subject');
+      const hasTerm = headerCells.includes('term');
       const rows = lines.slice(1).map((ln) => {
         const cells = splitLine(ln);
         const obj = {};
         headerCells.forEach((h, i) => {
           obj[h] = cells[i] ?? '';
         });
+        if (!hasSubject) obj['subject'] = fallbackSubject ?? '';
+        if (!hasTerm) obj['term'] = fallbackTerm ?? '';
         return obj;
       });
       parseExcelRows(rows);
@@ -1090,7 +1094,9 @@
 
     function handleParseCsv() {
       setExcelStatus('جارٍ قراءة النص...', 'muted');
-      parseCsvText(csvTextarea.value);
+      const fallbackSubject = normalizeStr(subjectSelect?.value);
+      const fallbackTerm = normalizeStr(termSelect?.value);
+      parseCsvText(csvTextarea.value, fallbackSubject, fallbackTerm);
       setExcelStatus(
         excelErrors.length
           ? `تمت القراءة: ${excelQuestions.length} سؤال، أخطاء: ${excelErrors.length}`
@@ -1552,6 +1558,8 @@
     parseExcelBtn.addEventListener('click', handleParseExcel);
     uploadExcelBtn.addEventListener('click', handleUploadExcel);
     downloadTemplateBtn.addEventListener('click', handleDownloadTemplate);
+    parseCsvBtn.addEventListener('click', handleParseCsv);
+    clearCsvBtn.addEventListener('click', handleClearCsv);
 
     function buildPromptText(params) {
       const {
