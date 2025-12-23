@@ -374,24 +374,53 @@
       roomRole.textContent = '';
       allowedRooms = [];
       if (!currentUser) return;
-      // جلب الغرف التي المستخدم فيها Owner/Admin فقط
-      const { data, error } = await client
+
+      // 1) الغرف التي يملكها المستخدم مباشرة
+      const ownerPromise = client
+        .from('rooms')
+        .select('id, name, created_by')
+        .eq('created_by', currentUser.id);
+
+      // 2) الغرف التي هو فيها Owner/Admin عبر room_members
+      const memberPromise = client
         .from('room_members')
         .select('room_id, role, rooms(name, created_by)')
         .eq('user_id', currentUser.id)
         .in('role', ['owner', 'admin']);
 
-      if (error) {
-        setStatus(authStatus, 'فشل تحميل الغرف: ' + error.message, 'error');
+      const [{ data: ownerData, error: ownerError }, { data: memberData, error: memberError }] =
+        await Promise.all([ownerPromise, memberPromise]);
+
+      if (ownerError) {
+        setStatus(authStatus, 'فشل تحميل غرف المالك: ' + ownerError.message, 'error');
+        return;
+      }
+      if (memberError) {
+        setStatus(authStatus, 'فشل تحميل غرف العضوية: ' + memberError.message, 'error');
         return;
       }
 
-      allowedRooms = (data || []).map((m) => ({
-        room_id: m.room_id,
-        name: m.rooms?.name || m.room_id,
-        role: m.role,
-        created_by: m.rooms?.created_by,
-      }));
+      const roomsMap = new Map();
+
+      (ownerData || []).forEach((r) => {
+        roomsMap.set(r.id, {
+          room_id: r.id,
+          name: r.name || r.id,
+          role: 'owner',
+          created_by: r.created_by,
+        });
+      });
+
+      (memberData || []).forEach((m) => {
+        roomsMap.set(m.room_id, {
+          room_id: m.room_id,
+          name: m.rooms?.name || m.room_id,
+          role: m.role,
+          created_by: m.rooms?.created_by,
+        });
+      });
+
+      allowedRooms = Array.from(roomsMap.values());
 
       if (!allowedRooms.length) {
         roomsSelect.innerHTML = '<option value="">لا توجد غرف لديك صلاحية عليها</option>';
