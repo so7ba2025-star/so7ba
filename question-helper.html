@@ -1553,6 +1553,147 @@
     uploadExcelBtn.addEventListener('click', handleUploadExcel);
     downloadTemplateBtn.addEventListener('click', handleDownloadTemplate);
 
+    function buildPromptText(params) {
+      const {
+        subject,
+        unit,
+        lesson,
+        count,
+        language,
+        gradeLevel,
+        educationType,
+        createdBy,
+        term,
+        year,
+      } = params;
+
+      const langLabel = language === 'english' ? 'English' : 'Arabic';
+      const languageNote =
+        language === 'english'
+          ? 'Questions, options, and answers must be in English.'
+          : 'صياغة السؤال والاختيارات والإجابات باللغة العربية فقط.';
+
+      return [
+        'أنت مساعد لتوليد بنك أسئلة بصيغة TSV (Tab-Separated Values) بدون أي نص إضافي.',
+        '',
+        `إعدادات السياق:`,
+        `- المادة: ${subject}`,
+        `- الوحدة: ${unit}`,
+        `- الدرس: ${lesson}`,
+        `- عدد الأسئلة المطلوب: ${count}`,
+        `- لغة الإخراج: ${langLabel}`,
+        `- grade_level: ${gradeLevel}`,
+        `- education_type: ${educationType}`,
+        `- term: ${term}`,
+        `- year: ${year}`,
+        `- created_by: ${createdBy}`,
+        '',
+        'تعليمات صارمة للإخراج:',
+        '1) أخرج الناتج كجدول TSV مفصول بـ Tab فقط. لا تستخدم فواصل أخرى (لا comma ولا semicolon).',
+        '2) يمنع استخدام Tab داخل أي خلية.',
+        '3) السطر الأول يجب أن يكون العناوين بالترتيب التالي (وبالإنجليزية كما هي):',
+        'question_text\tquestion_type\toption_a\toption_b\toption_c\toption_d\tcorrect_answer\tdifficulty\tchapter\tlesson',
+        '4) لا تضف أي أعمدة أخرى ولا أي نص قبل/بعد الجدول.',
+        '5) القيم المسموحة للحقل question_type: multiple_choice, true_false, fill_in_blank, short_answer فقط.',
+        '6) قواعد الخيارات:',
+        '   - multiple_choice: املأ option_a/b/c/d (4 اختيارات)، واجعل correct_answer مطابقًا لأحدها حرفيًا.',
+        '   - true_false: اترك option_a/b/c/d فارغة، واجعل correct_answer إما "صح" أو "خطأ".',
+        '   - fill_in_blank: اترك option_a/b/c/d فارغة، واجعل correct_answer هو النص الناقص.',
+        '   - short_answer: اترك option_a/b/c/d فارغة، واجعل correct_answer إجابة قصيرة (1-6 كلمات).',
+        '7) difficulty رقم من 1 إلى 5 ووزّع الصعوبة عبر الأسئلة.',
+        '8) chapter والـ lesson اكتب فيها نفس قيمة الدرس: ' + lesson,
+        '9) ' + languageNote,
+        '10) تجنب استخدام الفاصلة الإنجليزية "," أو ";" داخل النصوص قدر الإمكان (استخدم الفاصلة العربية "،" إن احتجت).',
+        '',
+        'ابدأ الآن بكتابة الجدول فقط (TSV) بدون أي شروح إضافية.',
+      ].join('\n');
+    }
+
+    async function handleCopyPrompt() {
+      promptStatus.textContent = '';
+      const subject = normalizeStr(promptSubject.value);
+      const unit = normalizeStr(promptUnit.value);
+      const lesson = normalizeStr(promptLesson.value);
+      const count = Number(promptCount.value || 0);
+      const language = promptLanguage.value;
+
+      if (!currentUser) {
+        promptStatus.textContent = 'سجّل الدخول أولاً.';
+        promptStatus.className = 'status inline error';
+        return;
+      }
+      const allowed = allowedRooms.find((r) => r.room_id === roomsSelect.value);
+      if (!allowed) {
+        promptStatus.textContent = 'اختر غرفة صالحة أولاً.';
+        promptStatus.className = 'status inline error';
+        return;
+      }
+      if (!subject || !unit || !lesson) {
+        promptStatus.textContent = 'المادة والوحدة والدرس حقول إجبارية.';
+        promptStatus.className = 'status inline error';
+        return;
+      }
+      if (!count || count < 1) {
+        promptStatus.textContent = 'عدد الأسئلة يجب أن يكون رقمًا 1 فأكثر.';
+        promptStatus.className = 'status inline error';
+        return;
+      }
+      if (!language) {
+        promptStatus.textContent = 'اختر لغة الأسئلة.';
+        promptStatus.className = 'status inline error';
+        return;
+      }
+
+      const metadata = allowed?.metadata || {};
+      const gradeLevel = getRoomGradeLevel(metadata);
+      const educationType = getRoomEducationType(metadata);
+      const term = normalizeStr(termSelect.value) || 'term_1';
+
+      const promptText = buildPromptText({
+        subject,
+        unit,
+        lesson,
+        count,
+        language,
+        gradeLevel,
+        educationType,
+        createdBy: currentUser.id,
+        term,
+        year: 25,
+      });
+
+      try {
+        await navigator.clipboard.writeText(promptText);
+        promptStatus.textContent = 'تم النسخ للـ clipboard.';
+        promptStatus.className = 'status inline success';
+      } catch (e) {
+        promptStatus.textContent = 'فشل النسخ التلقائي، انسخ يدويًا.';
+        promptStatus.className = 'status inline error';
+      }
+    }
+
+    if (openPromptModalBtn && promptModal) {
+      openPromptModalBtn.addEventListener('click', () => {
+        promptModal.style.display = 'flex';
+        promptStatus.textContent = '';
+        promptStatus.className = 'status inline muted';
+        promptSubject.value = '';
+        promptUnit.value = '';
+        promptLesson.value = '';
+        promptCount.value = 10;
+        promptLanguage.value = '';
+      });
+    }
+    if (closePromptModalBtn && promptModal) {
+      closePromptModalBtn.addEventListener('click', () => {
+        promptModal.style.display = 'none';
+        promptStatus.textContent = '';
+      });
+    }
+    if (copyPromptBtn) {
+      copyPromptBtn.addEventListener('click', handleCopyPrompt);
+    }
+
     initSession();
     handleQuestionTypeChange();
   </script>
