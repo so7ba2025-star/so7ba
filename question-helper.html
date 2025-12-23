@@ -894,8 +894,9 @@
       }
       const subject = normalizeStr(subjectSelect.value) || 'غير محدد';
       const term = normalizeStr(termSelect.value) || 'غير محدد';
-      const gradeLevel = normalizeStr(gradeLevelInput.value) || 'غير محدد';
-      const educationType = normalizeStr(educationTypeInput.value) || 'غير محدد';
+      const metadata = allowed?.metadata || {};
+      const gradeLevel = getRoomGradeLevel(metadata);
+      const educationType = getRoomEducationType(metadata);
 
       uploadExcelBtn.disabled = true;
       parseExcelBtn.disabled = true;
@@ -1266,6 +1267,10 @@
         return;
       }
 
+      const metadata = allowed?.metadata || {};
+      const gradeLevel = getRoomGradeLevel(metadata);
+      const educationType = getRoomEducationType(metadata);
+
       const questionText = document.getElementById('question_text').value.trim();
       const questionType = questionTypeSelect.value;
       const difficulty = Number(document.getElementById('difficulty').value || 1);
@@ -1280,8 +1285,6 @@
       const term = normalizeStr(termSelect.value);
       const chapter = document.getElementById('chapter').value.trim();
       const lesson = document.getElementById('lesson').value.trim();
-      const gradeLevel = normalizeStr(gradeLevelInput.value) || 'غير محدد';
-      const educationType = normalizeStr(educationTypeInput.value) || 'غير محدد';
 
       if (!questionText) {
         setStatus(submitStatus, 'أدخل نص السؤال', 'error');
@@ -1314,10 +1317,10 @@
         question_type: questionType,
         correct_answer: questionType === 'short_answer' || questionType === 'fill_in_blank' ? (correctAnswer || '—') : correctAnswer,
         options: options.length ? options : null,
-        grade_level: gradeLevel || 'غير محدد',
-        education_type: educationType || 'غير محدد',
-        subject: subject || 'غير محدد',
-        term: term || 'غير محدد',
+        grade_level: gradeLevel,
+        education_type: educationType,
+        subject,
+        term,
         chapter: chapter || null,
         lesson: lesson || null,
         difficulty: isNaN(difficulty) ? 1 : Math.max(1, Math.min(5, difficulty)),
@@ -1327,7 +1330,7 @@
       const { error } = await client.from('quiz_questions').insert(payload);
       // حتى مع الأخطاء نكمل بما توفر
       document.getElementById('question_text').value = '';
-      if (questionType === 'open') {
+      if (questionType === 'short_answer' || questionType === 'fill_in_blank') {
         correctAnswerText.value = '';
       }
       document.getElementById('chapter').value = '';
