@@ -1211,24 +1211,44 @@
         const roomId = roomsSelect.value;
         const search = normalizeStr(membersSearchInput ? membersSearchInput.value : '');
 
-        // 1) Load members + profiles (avatar/nickname)
-        let q = client
+        // 1) Load members first (no join) ثم نجلب ملفات المستخدمين في استعلام منفصل.
+        const { data: membersData, error: membersError } = await client
           .from('room_members')
-          .select('user_id, display_name, role, is_host, status, user_profiles(id, avatar_url, nickname, nickname_discriminator)')
+          .select('user_id, display_name, role, is_host, status')
           .eq('room_id', roomId);
 
-        const { data, error } = await q;
-        if (error) {
-          membersStatus.textContent = 'فشل تحميل الأعضاء: ' + error.message;
+        if (membersError) {
+          membersStatus.textContent = 'فشل تحميل الأعضاء: ' + membersError.message;
           membersStatus.className = 'status error';
           return;
         }
 
-        const raw = Array.isArray(data) ? data : [];
-        currentMembers = raw.map((row) => {
-          const up = row.user_profiles || {};
+        const rawMembers = Array.isArray(membersData) ? membersData : [];
+        const userIds = rawMembers
+          .map((m) => normalizeStr(m.user_id))
+          .filter((id) => id.length);
+
+        const profilesById = {};
+        if (userIds.length) {
+          const { data: profilesData, error: profilesError } = await client
+            .from('user_profiles')
+            .select('id, avatar_url, nickname, nickname_discriminator')
+            .inFilter('id', userIds);
+
+          if (!profilesError) {
+            (Array.isArray(profilesData) ? profilesData : []).forEach((p) => {
+              const id = normalizeStr(p.id);
+              if (!id) return;
+              profilesById[id] = p;
+            });
+          }
+        }
+
+        currentMembers = rawMembers.map((row) => {
+          const uid = normalizeStr(row.user_id);
+          const up = profilesById[uid] || {};
           return {
-            user_id: row.user_id,
+            user_id: uid,
             display_name: row.display_name,
             role: row.role,
             is_host: row.is_host,
