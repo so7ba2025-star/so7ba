@@ -532,6 +532,28 @@
           <label for="prompt-lesson">الدرس *</label>
           <input id="prompt-lesson" type="text" placeholder="مثال: التاء والهاء" />
         </div>
+        <div style="grid-column: 1 / -1;">
+          <label>أنواع الأسئلة المطلوبة *</label>
+          <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:6px;">
+            <label style="display:flex; align-items:center; gap:8px; font-weight:800; margin:0;">
+              <input type="checkbox" class="prompt-qtype" value="multiple_choice" checked />
+              multiple_choice
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-weight:800; margin:0;">
+              <input type="checkbox" class="prompt-qtype" value="true_false" checked />
+              true_false
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-weight:800; margin:0;">
+              <input type="checkbox" class="prompt-qtype" value="fill_in_blank" checked />
+              fill_in_blank
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-weight:800; margin:0;">
+              <input type="checkbox" class="prompt-qtype" value="short_answer" checked />
+              short_answer
+            </label>
+          </div>
+          <div class="muted" style="margin-top:6px;">اختار نوع واحد أو أكثر. سيتم توزيع عدد الأسئلة بالتساوي تقريبًا بين الأنواع المختارة.</div>
+        </div>
         <div>
           <label for="prompt-count">عدد الأسئلة *</label>
           <input id="prompt-count" type="number" min="1" value="10" />
@@ -598,6 +620,7 @@
     const promptLesson = document.getElementById('prompt-lesson');
     const promptCount = document.getElementById('prompt-count');
     const promptLanguage = document.getElementById('prompt-language');
+    const promptQTypeNodes = () => Array.from(document.querySelectorAll('.prompt-qtype'));
     const copyPromptBtn = document.getElementById('copy-prompt-btn');
     const closePromptModalBtn = document.getElementById('close-prompt-modal-btn');
     const promptStatus = document.getElementById('prompt-status');
@@ -1628,6 +1651,7 @@
         lesson,
         count,
         language,
+        questionTypes,
         gradeLevel,
         educationType,
         createdBy,
@@ -1640,6 +1664,18 @@
         language === 'english'
           ? 'Questions, options, and answers must be in English.'
           : 'صياغة السؤال والاختيارات والإجابات باللغة العربية فقط.';
+
+      const selectedTypes = Array.isArray(questionTypes) && questionTypes.length
+        ? questionTypes
+        : ['multiple_choice', 'true_false', 'fill_in_blank', 'short_answer'];
+      const selectedTypesStr = selectedTypes.join(', ');
+
+      const typeExamples = {
+        multiple_choice: `${subject}\t${term}\tسؤال اختيار من متعدد\tmultiple_choice\tاختيار 1\tاختيار 2\tاختيار 3\tاختيار 4\tاختيار 2\t2\t${unit}\t${lesson}`,
+        true_false: `${subject}\t${term}\tسؤال صح/خطأ\ttrue_false\t\t\t\t\tصح\t1\t${unit}\t${lesson}`,
+        fill_in_blank: `${subject}\t${term}\tأكمل الفراغ: ...\tfill_in_blank\t\t\t\t\tالإجابة الناقصة\t2\t${unit}\t${lesson}`,
+        short_answer: `${subject}\t${term}\tاشرح بإيجاز: ...\tshort_answer\t\t\t\t\tإجابة قصيرة\t3\t${unit}\t${lesson}`,
+      };
 
       return [
         'أنت مساعد لتوليد بنك أسئلة بصيغة TSV (Tab-Separated Values) بدون أي نص إضافي.',
@@ -1669,32 +1705,27 @@
         `6) اكتب term = ${term} حرفيًا في كل سطر (المسموح فقط term_1 أو term_2).`,
         '7) لا تضف أي أعمدة أخرى ولا أي نص قبل/بعد الجدول. لا تكتب شروح أو تعداد نقطي.',
         '8) القيم المسموحة للحقل question_type: multiple_choice, true_false, fill_in_blank, short_answer فقط (لا تتركه فارغًا).',
-        '9) قواعد الخيارات:',
+        `9) يجب أن يكون question_type في كل سطر واحدًا من الأنواع التالية فقط: ${selectedTypesStr} (ممنوع غير ذلك).`,
+        `10) اكتب بالضبط ${count} سؤال. وزّع الأسئلة بالتساوي تقريبًا بين الأنواع المختارة.`,
+        '11) قواعد الخيارات:',
         '   - multiple_choice: املأ option_a/b/c/d (4 اختيارات)، واجعل correct_answer مطابقًا لأحدها حرفيًا.',
         '   - true_false: اترك option_a/b/c/d فارغة، واجعل correct_answer إما "صح" أو "خطأ".',
         '   - fill_in_blank: اترك option_a/b/c/d فارغة، واجعل correct_answer هو النص الناقص.',
         '   - short_answer: اترك option_a/b/c/d فارغة، واجعل correct_answer إجابة قصيرة أو نموذجية (يفضل جملة قصيرة).',
-        '10) difficulty رقم من 1 إلى 5 ووزّع الصعوبة عبر الأسئلة.',
-        `11) املأ chapter بقيمة الوحدة التالية حرفيًا: ${unit}`,
-        `12) املأ lesson بقيمة الدرس التالية حرفيًا: ${lesson}`,
-        '13) ' + languageNote,
-        '14) تجنب استخدام الفاصلة الإنجليزية "," أو ";" داخل النصوص قدر الإمكان (استخدم الفاصلة العربية "،" إن احتجت).',
-        '15) تحقق ذاتيًا قبل إرسال الناتج:',
+        '12) difficulty رقم من 1 إلى 5 ووزّع الصعوبة عبر الأسئلة.',
+        `13) املأ chapter بقيمة الوحدة التالية حرفيًا: ${unit}`,
+        `14) املأ lesson بقيمة الدرس التالية حرفيًا: ${lesson}`,
+        '15) ' + languageNote,
+        '16) تجنب استخدام الفاصلة الإنجليزية "," أو ";" داخل النصوص قدر الإمكان (استخدم الفاصلة العربية "،" إن احتجت).',
+        '17) تحقق ذاتيًا قبل إرسال الناتج:',
         '   - السطر الأول يجب أن يساوي سطر العناوين أعلاه حرفيًا.',
         '   - كل سطر بيانات يجب أن يحتوي 11 Tab بالضبط (12 عمود).',
         '   - question_type لا يمكن أن يكون فارغًا نهائيًا.',
         '   - لا تضع Tab إضافي/عمود فارغ قبل question_type.',
-        '16) أي إخلال بالتعليمات السابقة غير مقبول: أعد كتابة الجدول ملتزمًا بها.',
+        '18) أي إخلال بالتعليمات السابقة غير مقبول: أعد كتابة الجدول ملتزمًا بها.',
         '',
         'أمثلة صحيحة (لاحظ عدد الـTabs والخانات الفارغة):',
-        'multiple_choice مثال:',
-        `${subject}\t${term}\tسؤال اختيار من متعدد\tmultiple_choice\tاختيار 1\tاختيار 2\tاختيار 3\tاختيار 4\tاختيار 2\t2\t${unit}\t${lesson}`,
-        'true_false مثال:',
-        `${subject}\t${term}\tسؤال صح/خطأ\ttrue_false\t\t\t\t\tصح\t1\t${unit}\t${lesson}`,
-        'fill_in_blank مثال:',
-        `${subject}\t${term}\tأكمل الفراغ: ...\tfill_in_blank\t\t\t\t\tالإجابة الناقصة\t2\t${unit}\t${lesson}`,
-        'short_answer مثال:',
-        `${subject}\t${term}\tاشرح بإيجاز: ...\tshort_answer\t\t\t\t\tإجابة قصيرة\t3\t${unit}\t${lesson}`,
+        ...selectedTypes.map((t) => `${t} مثال:\n${typeExamples[t] || ''}`).filter((s) => s.trim().length),
         '',
         'ابدأ الآن بكتابة الجدول فقط (TSV) بدون أي شروح إضافية.',
       ].join('\n');
@@ -1707,6 +1738,7 @@
       const lesson = normalizeStr(promptLesson.value);
       const count = Number(promptCount.value || 0);
       const language = promptLanguage.value;
+      const selectedTypes = promptQTypeNodes().filter((n) => n.checked).map((n) => n.value);
 
       if (!currentUser) {
         promptStatus.textContent = 'سجّل الدخول أولاً.';
@@ -1724,6 +1756,11 @@
         promptStatus.className = 'status inline error';
         return;
       }
+      if (!selectedTypes.length) {
+        promptStatus.textContent = 'اختر نوع سؤال واحد على الأقل.';
+        promptStatus.className = 'status inline error';
+        return;
+      }
       if (!count || count < 1) {
         promptStatus.textContent = 'عدد الأسئلة يجب أن يكون رقمًا 1 فأكثر.';
         promptStatus.className = 'status inline error';
@@ -1732,22 +1769,6 @@
       if (!language) {
         promptStatus.textContent = 'اختر لغة الأسئلة.';
         promptStatus.className = 'status inline error';
-        const gradeLevel = getRoomGradeLevel(allowed);
-        const educationType = getRoomEducationType(allowed);
-        const term = normalizeStr(termSelect.value) || 'term_1';
-
-        const promptText = buildPromptText({
-          subject,
-          unit,
-          lesson,
-          count,
-          language,
-          gradeLevel,
-          educationType,
-          createdBy: currentUser.id,
-          term,
-          year: 25,
-        });
         return;
       }
 
@@ -1761,6 +1782,7 @@
         lesson,
         count,
         language,
+        questionTypes: selectedTypes,
         gradeLevel,
         educationType,
         createdBy: currentUser.id,
