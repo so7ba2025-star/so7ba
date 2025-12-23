@@ -391,6 +391,8 @@
 
       const [{ data: ownerData, error: ownerError }, { data: memberData, error: memberError }] =
         await Promise.all([ownerPromise, memberPromise]);
+      console.log('[rooms] ownerData', ownerData);
+      console.log('[rooms] memberData', memberData);
 
       if (ownerError) {
         setStatus(authStatus, 'فشل تحميل غرف المالك: ' + ownerError.message, 'error');
@@ -445,6 +447,7 @@
       }
 
       allowedRooms = Array.from(roomsMap.values());
+      console.log('[rooms] merged allowedRooms', allowedRooms);
 
       if (!allowedRooms.length) {
         roomsSelect.innerHTML = '<option value="">لا توجد غرف لديك صلاحية عليها</option>';
