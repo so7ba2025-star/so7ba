@@ -20,19 +20,23 @@
       --error: #d93025;
     }
     * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+    }
     body {
       margin: 0;
       min-height: 100vh;
       font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
       color: var(--text);
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
       padding: 18px;
       background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.08), transparent 26%),
                   radial-gradient(circle at 80% 10%, rgba(255,255,255,0.07), transparent 24%),
                   linear-gradient(135deg, #4d0000, #7a0000);
-      overflow: hidden;
+      overflow-y: auto;
+      overflow-x: hidden;
     }
     .shell {
       width: min(1200px, 100%);
@@ -389,26 +393,21 @@
       const roomsMap = new Map();
 
       (memberData || []).forEach((m) => {
-        const existing = roomsMap.get(m.room_id);
-        const role = existing?.role === 'owner' ? 'owner' : m.role;
         roomsMap.set(m.room_id, {
           room_id: m.room_id,
-          name: existing?.name || m.room_id,
-          role,
-          created_by: existing?.created_by,
+          name: '', // سنملأه لاحقاً
+          role: m.role,
         });
       });
 
-      // جلب أسماء الغرف الناقصة (إن لم تكن مملوكة)
-      const missingIds = Array.from(roomsMap.values())
-        .filter((r) => !r.name || r.name === r.room_id)
-        .map((r) => r.room_id);
-      if (missingIds.length) {
+      // جلب أسماء الغرف بالـ room_id التي لدينا
+      const ids = Array.from(roomsMap.keys());
+      if (ids.length) {
         try {
           const { data: roomsInfo, error: roomsInfoError } = await client
             .from('rooms')
             .select('id, name, created_by')
-            .in('id', missingIds);
+            .in('id', ids);
           if (roomsInfoError) {
             console.warn('[rooms] roomsInfoError', roomsInfoError);
           } else {
