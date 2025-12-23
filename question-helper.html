@@ -100,6 +100,50 @@
       background: rgba(255,255,255,0.20);
       border-color: rgba(255,255,255,0.35);
     }
+    .subtab-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 0 0 12px;
+    }
+    .subtab-btn {
+      background: #fff;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-weight: 900;
+      box-shadow: none;
+      min-width: 140px;
+    }
+    .subtab-btn.active {
+      border-color: rgba(0,0,0,0.25);
+      background: #fff8f0;
+    }
+    .questions-subpanel { display: none; }
+    .questions-subpanel.active { display: block; }
+    .questions-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .questions-table th,
+    .questions-table td {
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      padding: 8px;
+      font-size: 13px;
+      vertical-align: top;
+    }
+    .questions-table th {
+      background: #fff8f0;
+      font-weight: 900;
+      text-align: right;
+    }
+    .questions-table tr:last-child td { border-bottom: none; }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
     .upload-box {
@@ -324,6 +368,78 @@
     <div class="orb large four"></div>
   </div>
 
+  <!-- Edit Question Modal -->
+  <div id="edit-question-modal" class="modal-backdrop">
+    <div class="modal-card" style="max-width:820px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px;">
+        <h3 style="margin:0;">تعديل سؤال</h3>
+        <button id="close-edit-question-modal-btn" class="ghost-btn" style="min-width: auto; padding:6px 10px;">إغلاق</button>
+      </div>
+      <div class="modal-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+        <div style="grid-column: 1 / -1;">
+          <label for="edit-question-text">نص السؤال *</label>
+          <textarea id="edit-question-text" rows="4" placeholder="اكتب السؤال هنا"></textarea>
+        </div>
+        <div>
+          <label for="edit-question-type">نوع السؤال *</label>
+          <select id="edit-question-type">
+            <option value="multiple_choice">multiple_choice</option>
+            <option value="true_false">true_false</option>
+            <option value="fill_in_blank">fill_in_blank</option>
+            <option value="short_answer">short_answer</option>
+          </select>
+        </div>
+        <div>
+          <label for="edit-difficulty">difficulty (1-5)</label>
+          <input id="edit-difficulty" type="number" min="1" max="5" value="1" />
+        </div>
+        <div>
+          <label for="edit-subject">subject *</label>
+          <input id="edit-subject" type="text" />
+        </div>
+        <div>
+          <label for="edit-term">term *</label>
+          <select id="edit-term">
+            <option value="term_1">term_1</option>
+            <option value="term_2">term_2</option>
+          </select>
+        </div>
+        <div>
+          <label for="edit-chapter">chapter</label>
+          <input id="edit-chapter" type="text" />
+        </div>
+        <div>
+          <label for="edit-lesson">lesson</label>
+          <input id="edit-lesson" type="text" />
+        </div>
+        <div>
+          <label for="edit-option-a">option_a</label>
+          <input id="edit-option-a" type="text" />
+        </div>
+        <div>
+          <label for="edit-option-b">option_b</label>
+          <input id="edit-option-b" type="text" />
+        </div>
+        <div>
+          <label for="edit-option-c">option_c</label>
+          <input id="edit-option-c" type="text" />
+        </div>
+        <div>
+          <label for="edit-option-d">option_d</label>
+          <input id="edit-option-d" type="text" />
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label for="edit-correct-answer">correct_answer *</label>
+          <input id="edit-correct-answer" type="text" />
+        </div>
+      </div>
+      <div class="modal-actions">
+        <div id="edit-question-status" class="status inline muted" style="margin-right:auto;"></div>
+        <button type="button" id="save-edit-question-btn">حفظ التعديل</button>
+      </div>
+    </div>
+  </div>
+
   <div class="shell">
     <div class="header-row">
       <div class="brand">
@@ -405,6 +521,13 @@
 
           <div id="panel-questions" class="tab-panel">
             <div class="card" id="question-card" style="margin-top:0;">
+      <div class="subtab-bar">
+        <button type="button" id="questions-subtab-single" class="subtab-btn active">إضافة سؤال</button>
+        <button type="button" id="questions-subtab-bulk" class="subtab-btn">إضافة مجموعة أسئلة</button>
+        <button type="button" id="questions-subtab-view" class="subtab-btn">عرض الأسئلة</button>
+      </div>
+
+      <div id="questions-subpanel-single" class="questions-subpanel active">
       <p class="title">✍️ إضافة سؤال</p>
       <label for="question_text">نص السؤال</label>
       <textarea id="question_text" placeholder="اكتب السؤال هنا"></textarea>
@@ -482,6 +605,10 @@
       </div>
       <div id="submit-status" class="status"></div>
 
+      </div>
+
+      <div id="questions-subpanel-bulk" class="questions-subpanel">
+
       <div class="divider" style="margin:16px 0;"></div>
       <p class="title" style="font-size:18px;">📤 رفع مجموعة أسئلة من Excel (xlsx)</p>
       <div class="upload-box">
@@ -504,6 +631,30 @@
           <button type="button" id="clear-csv-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">مسح النص</button>
           <button type="button" id="open-prompt-modal-btn" class="ghost-btn" style="margin-right:auto; color:#2f241f; border-color:#c6b299;">Generate AI Prompt</button>
         </div>
+      </div>
+
+      </div>
+
+      <div id="questions-subpanel-view" class="questions-subpanel">
+      <p class="title" style="font-size:18px; margin-top:0;">📚 عرض أسئلة الغرفة</p>
+      <div class="upload-box" style="background:#fff;">
+        <div class="row" style="align-items:end;">
+          <div>
+            <label for="questions-search">بحث (داخل نص السؤال)</label>
+            <input id="questions-search" type="text" placeholder="اكتب كلمة للبحث..." />
+          </div>
+          <div class="actions" style="margin-top:0; gap:8px; justify-content:flex-start;">
+            <button type="button" id="questions-refresh-btn" style="background:#5f5f5f; box-shadow:none;">تحديث</button>
+          </div>
+        </div>
+        <div id="questions-list-status" class="status muted" style="margin-top:8px;"></div>
+        <div id="questions-list-container"></div>
+        <div class="actions" style="margin-top:10px; gap:8px; align-items:center;">
+          <button type="button" id="questions-prev-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">السابق</button>
+          <button type="button" id="questions-next-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">التالي</button>
+          <span id="questions-page-info" class="muted" style="margin-right:auto;"></span>
+        </div>
+      </div>
       </div>
     </div>
           </div>
@@ -648,6 +799,44 @@
     let selectedRoomLogoUrl = null;
     let excelQuestions = [];
     let excelErrors = [];
+
+    const questionsSubtabSingleBtn = document.getElementById('questions-subtab-single');
+    const questionsSubtabBulkBtn = document.getElementById('questions-subtab-bulk');
+    const questionsSubtabViewBtn = document.getElementById('questions-subtab-view');
+    const questionsSubpanelSingle = document.getElementById('questions-subpanel-single');
+    const questionsSubpanelBulk = document.getElementById('questions-subpanel-bulk');
+    const questionsSubpanelView = document.getElementById('questions-subpanel-view');
+
+    const questionsSearchInput = document.getElementById('questions-search');
+    const questionsRefreshBtn = document.getElementById('questions-refresh-btn');
+    const questionsPrevBtn = document.getElementById('questions-prev-btn');
+    const questionsNextBtn = document.getElementById('questions-next-btn');
+    const questionsPageInfo = document.getElementById('questions-page-info');
+    const questionsListStatus = document.getElementById('questions-list-status');
+    const questionsListContainer = document.getElementById('questions-list-container');
+
+    const editQuestionModal = document.getElementById('edit-question-modal');
+    const closeEditQuestionModalBtn = document.getElementById('close-edit-question-modal-btn');
+    const editQuestionStatus = document.getElementById('edit-question-status');
+    const saveEditQuestionBtn = document.getElementById('save-edit-question-btn');
+    const editQuestionText = document.getElementById('edit-question-text');
+    const editQuestionType = document.getElementById('edit-question-type');
+    const editDifficulty = document.getElementById('edit-difficulty');
+    const editSubject = document.getElementById('edit-subject');
+    const editTerm = document.getElementById('edit-term');
+    const editChapter = document.getElementById('edit-chapter');
+    const editLesson = document.getElementById('edit-lesson');
+    const editOptionA = document.getElementById('edit-option-a');
+    const editOptionB = document.getElementById('edit-option-b');
+    const editOptionC = document.getElementById('edit-option-c');
+    const editOptionD = document.getElementById('edit-option-d');
+    const editCorrectAnswer = document.getElementById('edit-correct-answer');
+
+    const QUESTIONS_PAGE_SIZE = 20;
+    let questionsPage = 0;
+    let questionsTotalCount = null;
+    let currentQuestions = [];
+    let editingQuestionId = null;
 
     const ROOM_LOGO_BUCKET = 'room-assets';
 
@@ -858,6 +1047,357 @@
       tabQuestionsBtn.classList.toggle('active', !isRoom);
       panelRoom.classList.toggle('active', isRoom);
       panelQuestions.classList.toggle('active', !isRoom);
+      if (!isRoom) {
+        setActiveQuestionsSubTab('single');
+      }
+    }
+
+    function setActiveQuestionsSubTab(which) {
+      const isSingle = which === 'single';
+      const isBulk = which === 'bulk';
+      const isView = which === 'view';
+      if (questionsSubtabSingleBtn) questionsSubtabSingleBtn.classList.toggle('active', isSingle);
+      if (questionsSubtabBulkBtn) questionsSubtabBulkBtn.classList.toggle('active', isBulk);
+      if (questionsSubtabViewBtn) questionsSubtabViewBtn.classList.toggle('active', isView);
+      if (questionsSubpanelSingle) questionsSubpanelSingle.classList.toggle('active', isSingle);
+      if (questionsSubpanelBulk) questionsSubpanelBulk.classList.toggle('active', isBulk);
+      if (questionsSubpanelView) questionsSubpanelView.classList.toggle('active', isView);
+      if (isView) {
+        questionsPage = 0;
+        loadRoomQuestions();
+      }
+    }
+
+    function canManageSelectedRoom() {
+      const allowed = allowedRooms.find((r) => r.room_id === roomsSelect.value);
+      if (!allowed) return false;
+      return allowed.role === 'owner' || allowed.role === 'admin';
+    }
+
+    async function loadRoomQuestions() {
+      if (!questionsListStatus || !questionsListContainer) return;
+      questionsListContainer.innerHTML = '';
+
+      if (!currentUser) {
+        questionsListStatus.textContent = 'سجّل الدخول أولاً.';
+        questionsListStatus.className = 'status error';
+        return;
+      }
+      if (!canManageSelectedRoom()) {
+        questionsListStatus.textContent = 'ليست لديك صلاحية على هذه الغرفة.';
+        questionsListStatus.className = 'status error';
+        return;
+      }
+
+      const roomId = roomsSelect.value;
+      const search = normalizeStr(questionsSearchInput ? questionsSearchInput.value : '');
+      questionsListStatus.textContent = 'جارٍ تحميل الأسئلة...';
+      questionsListStatus.className = 'status muted';
+
+      const from = questionsPage * QUESTIONS_PAGE_SIZE;
+      const to = from + QUESTIONS_PAGE_SIZE - 1;
+
+      try {
+        let query = client
+          .from('quiz_questions')
+          .select('id, room_id, question_text, question_type, options, correct_answer, difficulty, chapter, lesson, subject, term, is_active, created_at', { count: 'exact' })
+          .eq('room_id', roomId)
+          .order('created_at', { ascending: false })
+          .range(from, to);
+
+        if (search) {
+          query = query.ilike('question_text', `%${search}%`);
+        }
+
+        const { data, error, count } = await query;
+        if (error) {
+          questionsListStatus.textContent = 'فشل تحميل الأسئلة: ' + error.message;
+          questionsListStatus.className = 'status error';
+          return;
+        }
+
+        currentQuestions = Array.isArray(data) ? data : [];
+        questionsTotalCount = typeof count === 'number' ? count : null;
+        renderRoomQuestions();
+      } catch (e) {
+        console.error('loadRoomQuestions error', e);
+        questionsListStatus.textContent = 'حدث خطأ أثناء تحميل الأسئلة.';
+        questionsListStatus.className = 'status error';
+      }
+    }
+
+    function renderRoomQuestions() {
+      if (!questionsListContainer || !questionsListStatus) return;
+
+      const total = questionsTotalCount;
+      const start = questionsPage * QUESTIONS_PAGE_SIZE + 1;
+      const end = questionsPage * QUESTIONS_PAGE_SIZE + currentQuestions.length;
+      questionsListStatus.textContent = currentQuestions.length ? '' : 'لا توجد أسئلة.';
+      questionsListStatus.className = currentQuestions.length ? 'status muted' : 'status muted';
+
+      if (questionsPageInfo) {
+        if (typeof total === 'number') {
+          questionsPageInfo.textContent = `عرض ${start}-${end} من ${total}`;
+        } else {
+          questionsPageInfo.textContent = `الصفحة ${questionsPage + 1}`;
+        }
+      }
+
+      if (questionsPrevBtn) questionsPrevBtn.disabled = questionsPage <= 0;
+      if (questionsNextBtn) {
+        const maxReached = typeof total === 'number' ? (end >= total) : (currentQuestions.length < QUESTIONS_PAGE_SIZE);
+        questionsNextBtn.disabled = maxReached;
+      }
+
+      const escapeHtml = (s) => (s ?? '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      let html = '';
+      html += '<table class="questions-table">';
+      html += '<thead><tr>';
+      html += '<th style="width:52px;">#</th>';
+      html += '<th>السؤال</th>';
+      html += '<th style="width:140px;">النوع</th>';
+      html += '<th style="width:140px;">المادة</th>';
+      html += '<th style="width:90px;">term</th>';
+      html += '<th style="width:80px;">diff</th>';
+      html += '<th style="width:160px;">إجراءات</th>';
+      html += '</tr></thead>';
+      html += '<tbody>';
+      currentQuestions.forEach((q, idx) => {
+        const n = questionsPage * QUESTIONS_PAGE_SIZE + idx + 1;
+        html += '<tr>';
+        html += `<td>${n}</td>`;
+        html += `<td>${escapeHtml(q.question_text)}</td>`;
+        html += `<td>${escapeHtml(q.question_type)}</td>`;
+        html += `<td>${escapeHtml(q.subject)}</td>`;
+        html += `<td>${escapeHtml(q.term)}</td>`;
+        html += `<td>${escapeHtml(q.difficulty)}</td>`;
+        html += '<td>';
+        html += `<button type="button" data-action="edit" data-id="${q.id}" style="background:#5f5f5f; box-shadow:none; padding:8px 10px; min-width:auto;">تعديل</button>`;
+        html += `<button type="button" data-action="delete" data-id="${q.id}" class="ghost-btn" style="color:#2f241f; border-color:#c6b299; padding:8px 10px; min-width:auto; margin-right:8px;">حذف</button>`;
+        html += '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+
+      questionsListContainer.innerHTML = html;
+
+      questionsListContainer.querySelectorAll('button[data-action="edit"]').forEach((btn) => {
+        btn.addEventListener('click', () => openEditQuestionModal(btn.getAttribute('data-id')));
+      });
+      questionsListContainer.querySelectorAll('button[data-action="delete"]').forEach((btn) => {
+        btn.addEventListener('click', () => deleteQuestion(btn.getAttribute('data-id')));
+      });
+    }
+
+    function getQuestionById(id) {
+      return currentQuestions.find((q) => q.id === id) || null;
+    }
+
+    function normalizeOptionsToFields(options) {
+      if (!options) return { a: '', b: '', c: '', d: '' };
+      if (Array.isArray(options)) {
+        return {
+          a: normalizeStr(options[0]),
+          b: normalizeStr(options[1]),
+          c: normalizeStr(options[2]),
+          d: normalizeStr(options[3]),
+        };
+      }
+      if (typeof options === 'object') {
+        return {
+          a: normalizeStr(options.option_a ?? options.a),
+          b: normalizeStr(options.option_b ?? options.b),
+          c: normalizeStr(options.option_c ?? options.c),
+          d: normalizeStr(options.option_d ?? options.d),
+        };
+      }
+      return { a: '', b: '', c: '', d: '' };
+    }
+
+    function openEditQuestionModal(id) {
+      const q = getQuestionById(id);
+      if (!q || !editQuestionModal) return;
+      editingQuestionId = id;
+      editQuestionStatus.textContent = '';
+      editQuestionStatus.className = 'status inline muted';
+
+      editQuestionText.value = normalizeStr(q.question_text);
+      editQuestionType.value = normalizeStr(q.question_type) || 'multiple_choice';
+      editDifficulty.value = isNaN(Number(q.difficulty)) ? 1 : Math.max(1, Math.min(5, Number(q.difficulty)));
+      editSubject.value = normalizeStr(q.subject);
+      editTerm.value = normalizeStr(q.term) || 'term_1';
+      editChapter.value = normalizeStr(q.chapter);
+      editLesson.value = normalizeStr(q.lesson);
+      editCorrectAnswer.value = normalizeStr(q.correct_answer);
+
+      const o = normalizeOptionsToFields(q.options);
+      editOptionA.value = o.a;
+      editOptionB.value = o.b;
+      editOptionC.value = o.c;
+      editOptionD.value = o.d;
+
+      editQuestionModal.style.display = 'flex';
+    }
+
+    function closeEditQuestionModal() {
+      if (!editQuestionModal) return;
+      editQuestionModal.style.display = 'none';
+      editingQuestionId = null;
+      editQuestionStatus.textContent = '';
+    }
+
+    async function saveEditedQuestion() {
+      if (!editingQuestionId) return;
+      if (!currentUser) return;
+      if (!canManageSelectedRoom()) {
+        editQuestionStatus.textContent = 'ليست لديك صلاحية على هذه الغرفة.';
+        editQuestionStatus.className = 'status inline error';
+        return;
+      }
+
+      const roomId = roomsSelect.value;
+      const question_text = normalizeStr(editQuestionText.value);
+      const question_type = normalizeStr(editQuestionType.value);
+      const subject = normalizeStr(editSubject.value);
+      const term = normalizeStr(editTerm.value) || 'term_1';
+      const correct_answer = normalizeStr(editCorrectAnswer.value);
+      const difficulty = isNaN(Number(editDifficulty.value)) ? 1 : Math.max(1, Math.min(5, Number(editDifficulty.value)));
+      const chapter = normalizeStr(editChapter.value) || null;
+      const lesson = normalizeStr(editLesson.value) || null;
+
+      if (!question_text) {
+        editQuestionStatus.textContent = 'نص السؤال مطلوب.';
+        editQuestionStatus.className = 'status inline error';
+        return;
+      }
+      if (!question_type) {
+        editQuestionStatus.textContent = 'نوع السؤال مطلوب.';
+        editQuestionStatus.className = 'status inline error';
+        return;
+      }
+      if (!subject) {
+        editQuestionStatus.textContent = 'subject مطلوب.';
+        editQuestionStatus.className = 'status inline error';
+        return;
+      }
+      if (!term) {
+        editQuestionStatus.textContent = 'term مطلوب.';
+        editQuestionStatus.className = 'status inline error';
+        return;
+      }
+      if (!correct_answer) {
+        editQuestionStatus.textContent = 'correct_answer مطلوب.';
+        editQuestionStatus.className = 'status inline error';
+        return;
+      }
+
+      const isMCQ = question_type === 'multiple_choice';
+      const isTF = question_type === 'true_false';
+      const isFill = question_type === 'fill_in_blank';
+      const isShort = question_type === 'short_answer';
+
+      let options = null;
+      if (isMCQ) {
+        const a = normalizeStr(editOptionA.value);
+        const b = normalizeStr(editOptionB.value);
+        const c = normalizeStr(editOptionC.value);
+        const d = normalizeStr(editOptionD.value);
+        if (!a || !b || !c || !d) {
+          editQuestionStatus.textContent = 'في multiple_choice لازم option_a/b/c/d تكون ممتلئة.';
+          editQuestionStatus.className = 'status inline error';
+          return;
+        }
+        options = [a, b, c, d];
+        if (!options.includes(correct_answer)) {
+          editQuestionStatus.textContent = 'correct_answer لازم يطابق أحد الاختيارات حرفيًا.';
+          editQuestionStatus.className = 'status inline error';
+          return;
+        }
+      } else {
+        options = null;
+        editOptionA.value = '';
+        editOptionB.value = '';
+        editOptionC.value = '';
+        editOptionD.value = '';
+        if (isTF) {
+          const ca = correct_answer;
+          if (!(ca === 'صح' || ca === 'خطأ' || ca.toLowerCase() === 'true' || ca.toLowerCase() === 'false')) {
+            editQuestionStatus.textContent = 'true_false: correct_answer لازم يكون "صح" أو "خطأ" (أو True/False).';
+            editQuestionStatus.className = 'status inline error';
+            return;
+          }
+        }
+        if (!(isTF || isFill || isShort)) {
+          editQuestionStatus.textContent = 'نوع السؤال غير مدعوم.';
+          editQuestionStatus.className = 'status inline error';
+          return;
+        }
+      }
+
+      saveEditQuestionBtn.disabled = true;
+      editQuestionStatus.textContent = 'جارٍ حفظ التعديل...';
+      editQuestionStatus.className = 'status inline muted';
+
+      try {
+        const { error } = await client
+          .from('quiz_questions')
+          .update({
+            question_text,
+            question_type,
+            subject,
+            term,
+            correct_answer,
+            options,
+            difficulty,
+            chapter,
+            lesson,
+          })
+          .eq('id', editingQuestionId)
+          .eq('room_id', roomId);
+
+        if (error) {
+          editQuestionStatus.textContent = 'فشل حفظ التعديل: ' + error.message;
+          editQuestionStatus.className = 'status inline error';
+          return;
+        }
+
+        editQuestionStatus.textContent = 'تم حفظ التعديل.';
+        editQuestionStatus.className = 'status inline success';
+        closeEditQuestionModal();
+        loadRoomQuestions();
+      } catch (e) {
+        console.error('saveEditedQuestion error', e);
+        editQuestionStatus.textContent = 'حدث خطأ أثناء حفظ التعديل.';
+        editQuestionStatus.className = 'status inline error';
+      } finally {
+        saveEditQuestionBtn.disabled = false;
+      }
+    }
+
+    async function deleteQuestion(id) {
+      if (!id) return;
+      if (!currentUser) return;
+      if (!canManageSelectedRoom()) {
+        alert('ليست لديك صلاحية على هذه الغرفة.');
+        return;
+      }
+      const q = getQuestionById(id);
+      const msg = q ? `تأكيد حذف السؤال؟\n\n${(q.question_text || '').toString().slice(0, 180)}` : 'تأكيد حذف السؤال؟';
+      if (!confirm(msg)) return;
+
+      const roomId = roomsSelect.value;
+      try {
+        const { error } = await client.from('quiz_questions').delete().eq('id', id).eq('room_id', roomId);
+        if (error) {
+          alert('فشل الحذف: ' + error.message);
+          return;
+        }
+        loadRoomQuestions();
+      } catch (e) {
+        console.error('deleteQuestion error', e);
+        alert('حدث خطأ أثناء الحذف.');
+      }
     }
 
     function normalizeRowKeys(row) {
@@ -1631,13 +2171,21 @@
     submitBtn.addEventListener('click', submitQuestion);
     addOptionBtn.addEventListener('click', () => addOptionField('', true));
     questionTypeSelect.addEventListener('change', handleQuestionTypeChange);
-    parseExcelBtn.addEventListener('click', handleParseExcel);
     uploadRoomLogoBtn.addEventListener('click', uploadRoomLogo);
     roomLogoLibrary.addEventListener('change', () => setRoomLogoPreview(roomLogoLibrary.value));
     removeRoomLogoBtn.addEventListener('click', () => setRoomLogoPreview(null));
     addSubjectBtn.addEventListener('click', addSubject);
     tabRoomBtn.addEventListener('click', () => setActiveTab('room'));
     tabQuestionsBtn.addEventListener('click', () => setActiveTab('questions'));
+    if (questionsSubtabSingleBtn) questionsSubtabSingleBtn.addEventListener('click', () => setActiveQuestionsSubTab('single'));
+    if (questionsSubtabBulkBtn) questionsSubtabBulkBtn.addEventListener('click', () => setActiveQuestionsSubTab('bulk'));
+    if (questionsSubtabViewBtn) questionsSubtabViewBtn.addEventListener('click', () => setActiveQuestionsSubTab('view'));
+    if (questionsRefreshBtn) questionsRefreshBtn.addEventListener('click', () => { questionsPage = 0; loadRoomQuestions(); });
+    if (questionsSearchInput) questionsSearchInput.addEventListener('input', () => { questionsPage = 0; loadRoomQuestions(); });
+    if (questionsPrevBtn) questionsPrevBtn.addEventListener('click', () => { questionsPage = Math.max(0, questionsPage - 1); loadRoomQuestions(); });
+    if (questionsNextBtn) questionsNextBtn.addEventListener('click', () => { questionsPage = questionsPage + 1; loadRoomQuestions(); });
+    if (saveEditQuestionBtn) saveEditQuestionBtn.addEventListener('click', saveEditedQuestion);
+    if (closeEditQuestionModalBtn) closeEditQuestionModalBtn.addEventListener('click', closeEditQuestionModal);
     parseExcelBtn.addEventListener('click', handleParseExcel);
     uploadExcelBtn.addEventListener('click', handleUploadExcel);
     downloadTemplateBtn.addEventListener('click', handleDownloadTemplate);
