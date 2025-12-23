@@ -8,8 +8,8 @@
   <script src="https://unpkg.com/@supabase/supabase-js@2" crossorigin="anonymous"></script>
   <style>
     :root {
-      --bg: #0f0b0b;
-      --bg-2: #c20202;
+      --bg: #0b0404;
+      --bg-2: #7a0000;
       --card: #ffffff;
       --accent: #9a4a1a;
       --accent-2: #f0c38e;
@@ -23,15 +23,16 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.12), transparent 26%),
-                  radial-gradient(circle at 80% 10%, rgba(255,255,255,0.09), transparent 24%),
-                  linear-gradient(135deg, #880404, #c20202);
       font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
       color: var(--text);
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 18px;
+      background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.08), transparent 26%),
+                  radial-gradient(circle at 80% 10%, rgba(255,255,255,0.07), transparent 24%),
+                  linear-gradient(135deg, #4d0000, #7a0000);
+      overflow: hidden;
     }
     .shell {
       width: min(1200px, 100%);
@@ -41,11 +42,40 @@
       border-radius: 24px;
       padding: 18px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+      position: relative;
+      z-index: 1;
     }
     .hero {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 18px;
+    }
+    .bg-orbs {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.12), rgba(255,255,255,0.02));
+      filter: blur(0px);
+      opacity: 0.45;
+      animation: spin 28s linear infinite;
+      mix-blend-mode: screen;
+    }
+    .orb.small { width: 160px; height: 160px; }
+    .orb.medium { width: 240px; height: 240px; }
+    .orb.large { width: 320px; height: 320px; }
+    .orb.one { top: 8%; left: 12%; animation-duration: 32s; }
+    .orb.two { top: 14%; right: 10%; animation-duration: 26s; }
+    .orb.three { bottom: 8%; left: 18%; animation-duration: 30s; }
+    .orb.four { bottom: 6%; right: 12%; animation-duration: 34s; }
+    @keyframes spin {
+      from { transform: rotate(0deg) translateZ(0); }
+      to   { transform: rotate(360deg) translateZ(0); }
     }
     .card {
       background: var(--card);
