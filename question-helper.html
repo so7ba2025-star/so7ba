@@ -376,41 +376,19 @@
       allowedRooms = [];
       if (!currentUser) return;
 
-      // 1) الغرف التي يملكها المستخدم مباشرة
-      const ownerPromise = client
-        .from('rooms')
-        .select('id, name, created_by')
-        .eq('created_by', currentUser.id);
-
-      // 2) الغرف التي هو فيها Owner/Admin عبر room_members (بدون join لتجنب فشل العلاقات)
-      const memberPromise = client
+      // الغرف التي هو فيها Owner/Admin عبر room_members (بدون join لتجنب فشل العلاقات)
+      const { data: memberDataRaw, error: memberError } = await client
         .from('room_members')
         .select('room_id, role')
         .eq('user_id', currentUser.id)
         .in('role', ['owner', 'admin']);
-
-      const [{ data: ownerDataRaw, error: ownerError }, { data: memberDataRaw, error: memberError }] =
-        await Promise.all([ownerPromise, memberPromise]);
-      const ownerData = ownerError ? [] : (ownerDataRaw ?? []);
       const memberData = memberError ? [] : (memberDataRaw ?? []);
-      if (ownerError) console.warn('[rooms] ownerError (متجاهَل، سنكمل بالعضوية فقط)', ownerError);
       if (memberError) console.warn('[rooms] memberError (متجاهَل، سنكمل بما توفر)', memberError);
-      console.log('[rooms] ownerData', ownerData);
       console.log('[rooms] memberData', memberData);
 
       const roomsMap = new Map();
 
-      (ownerData || []).forEach((r) => {
-        roomsMap.set(r.id, {
-          room_id: r.id,
-          name: r.name || r.id,
-          role: 'owner',
-          created_by: r.created_by,
-        });
-      });
-
       (memberData || []).forEach((m) => {
-        // لو كان هو مالك أيضاً، نحتفظ بدور المالك
         const existing = roomsMap.get(m.room_id);
         const role = existing?.role === 'owner' ? 'owner' : m.role;
         roomsMap.set(m.room_id, {
@@ -459,6 +437,11 @@
         return;
       }
 
+      // تأكيد إظهار الكروت بعد النجاح
+      authCard.style.display = 'none';
+      appCard.style.display = 'block';
+      questionCard.style.display = 'block';
+
       for (const room of allowedRooms) {
         const opt = document.createElement('option');
         opt.value = room.room_id;
@@ -466,7 +449,7 @@
         roomsSelect.appendChild(opt);
       }
       updateRoomRole();
-      questionCard.style.display = 'block';
+      setStatus(authStatus, `تم تحميل غرفك (${allowedRooms.length})`, 'success');
     }
 
     function updateRoomRole() {
