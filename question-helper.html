@@ -1205,7 +1205,7 @@
       try {
         const { data: joinData, error: joinError } = await client
           .from('room_members')
-          .select('room_id, role, rooms(id, name, code, description, logo_url, host_id, metadata)')
+          .select('room_id, role, rooms(id, name, code, description, logo_url, host_id, metadata, grade_level, education_type)')
           .eq('user_id', currentUser.id)
           .in('role', ['owner', 'admin']);
         if (joinError) {
@@ -1221,6 +1221,8 @@
               logo_url: d.rooms?.logo_url,
               host_id: d.rooms?.host_id,
               metadata: d.rooms?.metadata,
+              grade_level: d.rooms?.grade_level,
+              education_type: d.rooms?.education_type,
             }))
             .filter((r) => r.id);
         }
@@ -1243,7 +1245,7 @@
         try {
           const { data: info, error: roomsInfoError } = await client
             .from('rooms')
-            .select('id, name, code, description, logo_url, host_id, metadata')
+            .select('id, name, code, description, logo_url, host_id, metadata, grade_level, education_type')
             .in('id', memberData.map((m) => m.room_id));
           if (roomsInfoError) {
             console.warn('[rooms] roomsInfoError', roomsInfoError);
@@ -1271,6 +1273,8 @@
           logo_url: found?.logo_url,
           host_id: found?.host_id,
           metadata: found?.metadata,
+          grade_level: found?.grade_level,
+          education_type: found?.education_type,
         });
       });
 
