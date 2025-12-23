@@ -1081,10 +1081,56 @@
         if (hasSemicolon) return line.split(';');
         return line.split(',');
       };
-      const headerCells = splitLine(lines[0]).map((h) => h.trim().toLowerCase());
+
+      const expectedHeaders12 = [
+        'subject',
+        'term',
+        'question_text',
+        'question_type',
+        'option_a',
+        'option_b',
+        'option_c',
+        'option_d',
+        'correct_answer',
+        'difficulty',
+        'chapter',
+        'lesson',
+      ];
+      const expectedHeaders10 = [
+        'question_text',
+        'question_type',
+        'option_a',
+        'option_b',
+        'option_c',
+        'option_d',
+        'correct_answer',
+        'difficulty',
+        'chapter',
+        'lesson',
+      ];
+
+      const firstLineCellsRaw = splitLine(lines[0]);
+      const firstLineCells = firstLineCellsRaw.map((h) => h.trim().toLowerCase());
+      const looksLikeHeader =
+        firstLineCells.includes('question_text') ||
+        firstLineCells.includes('question_type') ||
+        (firstLineCells[0] === 'subject' && firstLineCells[1] === 'term') ||
+        firstLineCells[0] === 'question_text';
+
+      const inferredHeader =
+        firstLineCellsRaw.length === expectedHeaders12.length
+          ? expectedHeaders12
+          : firstLineCellsRaw.length === expectedHeaders10.length
+            ? expectedHeaders10
+            : firstLineCells;
+
+      const headerCells = looksLikeHeader ? firstLineCells : inferredHeader;
+      const dataLines = looksLikeHeader ? lines.slice(1) : lines;
+
       const hasSubject = headerCells.includes('subject');
       const hasTerm = headerCells.includes('term');
-      const rows = lines.slice(1).map((ln) => {
+
+      const rows = dataLines.map((ln) => {
         const cells = splitLine(ln);
         const obj = {};
         headerCells.forEach((h, i) => {
