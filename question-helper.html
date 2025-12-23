@@ -85,6 +85,25 @@
       font-size: 15px;
       color: rgba(255,255,255,0.92);
     }
+    .side-subnav {
+      margin-top: 8px;
+      padding-right: 10px;
+      border-right: 2px solid rgba(255,255,255,0.16);
+      display: none;
+    }
+    .side-subnav .subtab-btn {
+      width: 100%;
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.18);
+      color: #fff;
+      text-align: right;
+      border-radius: 14px;
+      min-width: auto;
+    }
+    .side-subnav .subtab-btn.active {
+      background: rgba(255,255,255,0.20);
+      border-color: rgba(255,255,255,0.35);
+    }
     .tab-btn {
       width: 100%;
       background: rgba(255,255,255,0.10);
@@ -174,6 +193,8 @@
       display: none;
       align-items: center;
       justify-content: center;
+      overflow-y: auto;
+      padding: 18px 12px;
       z-index: 999;
     }
     .modal-card {
@@ -181,6 +202,9 @@
       border-radius: 14px;
       padding: 16px;
       width: min(520px, 92%);
+      max-height: calc(100vh - 36px);
+      overflow-y: auto;
+      overflow-x: hidden;
       box-shadow: 0 20px 50px rgba(0,0,0,0.25);
       border: 1px solid #e7d9c6;
     }
@@ -475,6 +499,11 @@
           <div class="actions" style="flex-direction:column;">
             <button type="button" id="tab-room" class="tab-btn active">بيانات الغرفة</button>
             <button type="button" id="tab-questions" class="tab-btn">الأسئلة</button>
+            <div id="questions-side-subnav" class="side-subnav">
+              <button type="button" id="questions-subtab-single" class="subtab-btn active">إضافة سؤال</button>
+              <button type="button" id="questions-subtab-bulk" class="subtab-btn">إضافة مجموعة أسئلة</button>
+              <button type="button" id="questions-subtab-view" class="subtab-btn">عرض الأسئلة</button>
+            </div>
           </div>
         </aside>
 
@@ -521,12 +550,6 @@
 
           <div id="panel-questions" class="tab-panel">
             <div class="card" id="question-card" style="margin-top:0;">
-      <div class="subtab-bar">
-        <button type="button" id="questions-subtab-single" class="subtab-btn active">إضافة سؤال</button>
-        <button type="button" id="questions-subtab-bulk" class="subtab-btn">إضافة مجموعة أسئلة</button>
-        <button type="button" id="questions-subtab-view" class="subtab-btn">عرض الأسئلة</button>
-      </div>
-
       <div id="questions-subpanel-single" class="questions-subpanel active">
       <p class="title">✍️ إضافة سؤال</p>
       <label for="question_text">نص السؤال</label>
@@ -800,6 +823,8 @@
     let excelQuestions = [];
     let excelErrors = [];
 
+    const questionsSideSubnav = document.getElementById('questions-side-subnav');
+
     const questionsSubtabSingleBtn = document.getElementById('questions-subtab-single');
     const questionsSubtabBulkBtn = document.getElementById('questions-subtab-bulk');
     const questionsSubtabViewBtn = document.getElementById('questions-subtab-view');
@@ -1047,6 +1072,9 @@
       tabQuestionsBtn.classList.toggle('active', !isRoom);
       panelRoom.classList.toggle('active', isRoom);
       panelQuestions.classList.toggle('active', !isRoom);
+      if (questionsSideSubnav) {
+        questionsSideSubnav.style.display = isRoom ? 'none' : 'block';
+      }
       if (!isRoom) {
         setActiveQuestionsSubTab('single');
       }
