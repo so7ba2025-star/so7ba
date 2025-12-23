@@ -192,6 +192,10 @@
       padding: 12px 16px;
     }
     .google-btn img { width: 18px; height: 18px; }
+    .options-container { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+    .option-row { display: flex; gap: 8px; align-items: center; }
+    .option-row input { flex: 1; }
+    .option-row button { padding: 8px 10px; background: #7a0000; box-shadow: none; }
     @media (max-width: 640px) { body { padding: 12px; } }
   </style>
 </head>
@@ -260,13 +264,19 @@
         </div>
       </div>
 
-      <label for="options">الاختيارات (سطر لكل اختيار) - مطلوب لـ "اختيار من متعدد" أو "صح/خطأ"</label>
-      <textarea id="options" placeholder="مثال:
-أ - الإجابة الأولى
-ب - الإجابة الثانية"></textarea>
+      <div id="options-group">
+        <label>الاختيارات (كل اختيار في حقل مستقل)</label>
+        <div id="options-container" class="options-container"></div>
+        <div class="actions" style="margin-top:8px;">
+          <button type="button" id="add-option-btn" style="background:#5f5f5f; box-shadow:none;">إضافة اختيار</button>
+        </div>
+      </div>
 
-      <label for="correct_answer">الإجابة الصحيحة</label>
-      <input id="correct_answer" type="text" placeholder="اكتب الإجابة الصحيحة" />
+      <div id="correct-answer-group">
+        <label for="correct_answer_select">الإجابة الصحيحة</label>
+        <select id="correct_answer_select"></select>
+        <input id="correct_answer_text" type="text" placeholder="اكتب الإجابة الصحيحة" style="display:none; margin-top:8px;" />
+      </div>
 
       <div class="row">
         <div>
@@ -324,6 +334,11 @@
     const roomRole = document.getElementById('room-role');
     const submitBtn = document.getElementById('submit-btn');
     const submitStatus = document.getElementById('submit-status');
+    const questionTypeSelect = document.getElementById('question_type');
+    const optionsContainer = document.getElementById('options-container');
+    const addOptionBtn = document.getElementById('add-option-btn');
+    const correctAnswerSelect = document.getElementById('correct_answer_select');
+    const correctAnswerText = document.getElementById('correct_answer_text');
 
     let currentUser = null;
     let allowedRooms = []; // { room_id, name, role }
@@ -444,7 +459,7 @@
       for (const room of allowedRooms) {
         const opt = document.createElement('option');
         opt.value = room.room_id;
-        opt.textContent = `${room.name} (${room.role === 'owner' ? 'مالك' : 'أدمن'})`;
+        opt.textContent = `${room.name && room.name !== room.room_id ? room.name : room.room_id} (${room.role === 'owner' ? 'مالك' : 'أدمن'})`;
         roomsSelect.appendChild(opt);
       }
       updateRoomRole();
@@ -456,6 +471,74 @@
       roomRole.textContent = selected
         ? `دورك في هذه الغرفة: ${selected.role === 'owner' ? 'مالك' : 'أدمن'}`
         : '';
+    }
+
+    function updateCorrectAnswerOptions(optionsList) {
+      correctAnswerSelect.innerHTML = '';
+      optionsList.forEach((opt) => {
+        const o = document.createElement('option');
+        o.value = opt;
+        o.textContent = opt;
+        correctAnswerSelect.appendChild(o);
+      });
+      if (optionsList.length === 0) {
+        const o = document.createElement('option');
+        o.value = '';
+        o.textContent = 'اختر الاختيارات أولاً';
+        correctAnswerSelect.appendChild(o);
+      }
+    }
+
+    function syncOptionsInputs(questionType) {
+      optionsContainer.innerHTML = '';
+      let defaults = [];
+      if (questionType === 'true_false') {
+        defaults = ['صح', 'خطأ'];
+      } else if (questionType === 'multiple_choice') {
+        defaults = ['اختيار 1', 'اختيار 2'];
+      }
+      defaults.forEach((val, idx) => addOptionField(val, idx === 0 && questionType !== 'true_false'));
+      updateCorrectAnswerOptions(defaults);
+      correctAnswerSelect.style.display = 'block';
+      correctAnswerText.style.display = 'none';
+    }
+
+    function addOptionField(value = '', allowRemove = true) {
+      const row = document.createElement('div');
+      row.className = 'option-row';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = value;
+      input.placeholder = 'اكتب اختيار...';
+      input.addEventListener('input', () => {
+        const opts = Array.from(optionsContainer.querySelectorAll('input')).map((i) => i.value.trim()).filter((v) => v);
+        updateCorrectAnswerOptions(opts);
+      });
+      row.appendChild(input);
+      if (allowRemove) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = 'حذف';
+        btn.addEventListener('click', () => {
+          row.remove();
+          const opts = Array.from(optionsContainer.querySelectorAll('input')).map((i) => i.value.trim()).filter((v) => v);
+          updateCorrectAnswerOptions(opts);
+        });
+        row.appendChild(btn);
+      }
+      optionsContainer.appendChild(row);
+    }
+
+    function handleQuestionTypeChange() {
+      const questionType = questionTypeSelect.value;
+      if (questionType === 'open') {
+        optionsContainer.innerHTML = '';
+        correctAnswerSelect.style.display = 'none';
+        correctAnswerText.style.display = 'block';
+        correctAnswerText.value = '';
+      } else {
+        syncOptionsInputs(questionType);
+      }
     }
 
     async function submitQuestion() {
@@ -471,10 +554,15 @@
       }
 
       const questionText = document.getElementById('question_text').value.trim();
-      const questionType = document.getElementById('question_type').value;
+      const questionType = questionTypeSelect.value;
       const difficulty = Number(document.getElementById('difficulty').value || 1);
-      const optionsRaw = document.getElementById('options').value.trim();
-      const correctAnswer = document.getElementById('correct_answer').value.trim();
+      const optionsRaw = Array.from(optionsContainer.querySelectorAll('input'))
+        .map((i) => i.value.trim())
+        .filter((v) => v);
+      const correctAnswer =
+        questionType === 'open'
+          ? correctAnswerText.value.trim()
+          : correctAnswerSelect.value;
       const subject = document.getElementById('subject').value.trim();
       const term = document.getElementById('term').value.trim();
       const chapter = document.getElementById('chapter').value.trim();
@@ -490,11 +578,8 @@
 
       let options = [];
       if (questionType === 'multiple_choice' || questionType === 'true_false') {
-        options = optionsRaw
-          .split('\n')
-          .map((o) => o.trim())
-          .filter((o) => o.length > 0);
-        if (questionType === 'true_false' && options.length === 0) {
+        options = [...optionsRaw];
+        if (questionType === 'true_false') {
           options = ['صح', 'خطأ'];
         }
         if (options.length < 2) {
@@ -553,8 +638,11 @@
     logoutBtnTop.addEventListener('click', logout);
     roomsSelect.addEventListener('change', updateRoomRole);
     submitBtn.addEventListener('click', submitQuestion);
+    addOptionBtn.addEventListener('click', () => addOptionField('', true));
+    questionTypeSelect.addEventListener('change', handleQuestionTypeChange);
 
     initSession();
+    handleQuestionTypeChange();
   </script>
 </body>
 </html>
