@@ -855,6 +855,8 @@
       rows.forEach((row, idx) => {
         const line = idx + 2; // considering header row at 1
         const r = normalizeRowKeys(row);
+        const subject = normalizeStr(r['subject']);
+        const term = normalizeStr(r['term']);
         const questionText = normalizeStr(r['question_text']);
         const questionType = normalizeStr(r['question_type']) || 'multiple_choice';
         const optionA = normalizeStr(r['option_a']);
@@ -866,6 +868,18 @@
         const lesson = normalizeStr(r['lesson']);
         const correctAnswerRaw = mapCorrectAnswer(questionType, r['correct_answer']);
 
+        if (!subject) {
+          excelErrors.push(`سطر ${line}: subject فارغ`);
+          return;
+        }
+        if (!term) {
+          excelErrors.push(`سطر ${line}: term فارغ (اكتب term_1 أو term_2)`);
+          return;
+        }
+        if (!['term_1', 'term_2'].includes(term)) {
+          excelErrors.push(`سطر ${line}: term غير صحيح (${term}) - المسموح: term_1 أو term_2`);
+          return;
+        }
         if (!questionText) {
           excelErrors.push(`سطر ${line}: question_text فارغ`);
           return;
@@ -909,6 +923,8 @@
         const difficulty = isNaN(difficultyRaw) ? 1 : Math.max(1, Math.min(5, difficultyRaw));
 
         excelQuestions.push({
+          subject,
+          term,
           question_text: questionText,
           question_type: questionType,
           options,
@@ -982,19 +998,7 @@
       const metadata = allowed?.metadata || {};
       const gradeLevel = getRoomGradeLevel(metadata);
       const educationType = getRoomEducationType(metadata);
-      const roomSubject = normalizeStr(metadata.subject);
-      const roomTerm = normalizeStr(metadata.term);
-      const subject = normalizeStr(subjectSelect.value) || roomSubject;
-      const term = normalizeStr(termSelect.value) || roomTerm;
 
-      if (!subject) {
-        setExcelStatus('اختر المادة من بيانات الغرفة أولاً', 'error');
-        return;
-      }
-      if (!term) {
-        setExcelStatus('اختر الترم/الفصل أولاً', 'error');
-        return;
-      }
       if (!gradeLevel || !educationType) {
         setExcelStatus('بيانات الغرفة غير مكتملة (grade_level أو education_type مفقودة)', 'error');
         return;
@@ -1008,6 +1012,18 @@
       const fail = [];
       for (let i = 0; i < excelQuestions.length; i++) {
         const q = excelQuestions[i];
+        if (!q.subject) {
+          fail.push(`سطر ${i + 1}: subject فارغ`);
+          continue;
+        }
+        if (!q.term) {
+          fail.push(`سطر ${i + 1}: term فارغ (يجب أن يكون term_1 أو term_2)`);
+          continue;
+        }
+        if (q.term !== 'term_1' && q.term !== 'term_2') {
+          fail.push(`سطر ${i + 1}: term غير صالح (${q.term})`);
+          continue;
+        }
         const payload = {
           room_id: roomId,
           created_by: currentUser.id,
@@ -1017,8 +1033,8 @@
           options: q.options && q.options.length ? q.options : null,
           grade_level: gradeLevel,
           education_type: educationType,
-          subject,
-          term,
+          subject: q.subject,
+          term: q.term,
           chapter: q.chapter || null,
           lesson: q.lesson || null,
           difficulty: q.difficulty,
@@ -1095,6 +1111,8 @@
 
     function handleDownloadTemplate() {
       const headers = [
+        'subject',
+        'term',
         'question_text',
         'question_type',
         'option_a',
@@ -1107,9 +1125,9 @@
         'lesson',
       ];
       const sample = [
-        ['ما هو لون السماء؟', 'multiple_choice', 'أزرق', 'أحمر', 'أخضر', 'أصفر', 'أزرق', 1, 'الفصل 1', 'الدرس 1'],
-        ['الأرض كروية؟', 'true_false', '', '', '', '', 'صح', 1, 'الفصل 1', 'الدرس 2'],
-        ['اشرح قانون نيوتن الأول.', 'short_answer', '', '', '', '', '—', 2, 'الفصل 2', 'الدرس 3'],
+        ['اللغة العربية', 'term_1', 'ما هو لون السماء؟', 'multiple_choice', 'أزرق', 'أحمر', 'أخضر', 'أصفر', 'أزرق', 1, 'الفصل 1', 'الدرس 1'],
+        ['اللغة العربية', 'term_1', 'الأرض كروية؟', 'true_false', '', '', '', '', 'صح', 1, 'الفصل 1', 'الدرس 2'],
+        ['اللغة العربية', 'term_2', 'اشرح قانون نيوتن الأول.', 'short_answer', '', '', '', '', 'قانون نيوتن الأول ينص على...', 2, 'الفصل 2', 'الدرس 3'],
       ];
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet([headers, ...sample]);
