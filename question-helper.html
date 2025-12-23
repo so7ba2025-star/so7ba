@@ -241,6 +241,7 @@
         <label for="rooms">غرفك التي تملكها أو أنت أدمن فيها</label>
         <select id="rooms" style="min-height: 46px; font-size: 15px;"></select>
         <p class="muted" id="room-role" style="margin-top:8px;"></p>
+        <div id="room-details" class="muted" style="margin-top:8px;"></div>
       </div>
     </div>
 
@@ -405,41 +406,35 @@
       if (memberError) console.warn('[rooms] memberError (متجاهَل، سنكمل بما توفر)', memberError);
       console.log('[rooms] memberData', memberData);
 
-      const roomsMap = new Map();
-
-      (memberData || []).forEach((m) => {
-        roomsMap.set(m.room_id, {
-          room_id: m.room_id,
-          name: '', // سنملأه لاحقاً
-          role: m.role,
-        });
-      });
-
       // جلب أسماء الغرف بالـ room_id التي لدينا
-      const ids = Array.from(roomsMap.keys());
-      if (ids.length) {
+      let roomsInfo = [];
+      if (memberData.length) {
         try {
-          const { data: roomsInfo, error: roomsInfoError } = await client
+          const { data: info, error: roomsInfoError } = await client
             .from('rooms')
             .select('id, name, created_by')
-            .in('id', ids);
+            .in('id', memberData.map((m) => m.room_id));
           if (roomsInfoError) {
             console.warn('[rooms] roomsInfoError', roomsInfoError);
           } else {
-            (roomsInfo || []).forEach((r) => {
-              const existing = roomsMap.get(r.id);
-              roomsMap.set(r.id, {
-                room_id: r.id,
-                name: r.name || r.id,
-                role: existing?.role ?? 'admin',
-                created_by: r.created_by,
-              });
-            });
+            roomsInfo = info ?? [];
           }
         } catch (e) {
           console.warn('[rooms] roomsInfo fetch failed', e);
         }
       }
+
+      const roomsMap = new Map();
+
+      (memberData || []).forEach((m) => {
+        const found = roomsInfo.find((r) => r.id === m.room_id);
+        roomsMap.set(m.room_id, {
+          room_id: m.room_id,
+          name: found?.name || m.room_id,
+          role: m.role,
+          created_by: found?.created_by,
+        });
+      });
 
       allowedRooms = Array.from(roomsMap.values());
       console.log('[rooms] merged allowedRooms', allowedRooms);
@@ -471,6 +466,16 @@
       roomRole.textContent = selected
         ? `دورك في هذه الغرفة: ${selected.role === 'owner' ? 'مالك' : 'أدمن'}`
         : '';
+      const details = document.getElementById('room-details');
+      if (selected) {
+        details.innerHTML = `
+          <div>الغرفة: <strong>${selected.name && selected.name !== selected.room_id ? selected.name : selected.room_id}</strong></div>
+          <div>الـ ID: <span style="font-family:monospace;">${selected.room_id}</span></div>
+          <div>الدور: ${selected.role === 'owner' ? 'مالك' : 'أدمن'}</div>
+        `;
+      } else {
+        details.innerHTML = '';
+      }
     }
 
     function updateCorrectAnswerOptions(optionsList) {
