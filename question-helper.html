@@ -6,6 +6,7 @@
   <title>مساعد الأسئلة - أحلى صحبة</title>
   <link rel="icon" type="image/png" href="favicon.png" />
   <script src="https://unpkg.com/@supabase/supabase-js@2" crossorigin="anonymous"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <style>
     :root {
       --bg: #0b0404;
@@ -101,6 +102,26 @@
     }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
+    .upload-box {
+      border: 1px dashed #c6b299;
+      border-radius: 14px;
+      padding: 12px;
+      background: #fffaf5;
+      margin-top: 12px;
+    }
+    .preview-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    .preview-table th, .preview-table td {
+      border: 1px solid #e7d9c6;
+      padding: 6px;
+      font-size: 13px;
+    }
+    .preview-table th {
+      background: #f6ede0;
+    }
     @media (max-width: 900px) {
       .app-shell { grid-template-columns: 1fr; }
       .side { position: relative; top: 0; }
@@ -426,6 +447,19 @@
         <span class="muted" id="helper-text">سيتم الرفع للغرفة المحددة فقط، مع تحقق صلاحية Owner/Admin.</span>
       </div>
       <div id="submit-status" class="status"></div>
+
+      <div class="divider" style="margin:16px 0;"></div>
+      <p class="title" style="font-size:18px;">📤 رفع مجموعة أسئلة من Excel (xlsx)</p>
+      <div class="upload-box">
+        <label for="excel-file">اختر ملف Excel (صفحة واحدة، أول صف هو أسماء الأعمدة)</label>
+        <input id="excel-file" type="file" accept=".xlsx" />
+        <div class="actions" style="margin-top:10px; gap:8px;">
+          <button type="button" id="parse-excel-btn" style="background:#5f5f5f; box-shadow:none;">قراءة الملف</button>
+          <button type="button" id="upload-excel-btn" style="display:none;">رفع كل الأسئلة</button>
+        </div>
+        <div id="excel-status" class="status muted" style="margin-top:8px;"></div>
+        <div id="excel-preview"></div>
+      </div>
     </div>
           </div>
         </div>
@@ -479,11 +513,18 @@
     const tabQuestionsBtn = document.getElementById('tab-questions');
     const panelRoom = document.getElementById('panel-room');
     const panelQuestions = document.getElementById('panel-questions');
+    const excelFileInput = document.getElementById('excel-file');
+    const parseExcelBtn = document.getElementById('parse-excel-btn');
+    const uploadExcelBtn = document.getElementById('upload-excel-btn');
+    const excelStatus = document.getElementById('excel-status');
+    const excelPreview = document.getElementById('excel-preview');
 
     let currentUser = null;
     let allowedRooms = []; // { room_id, name, role, code, description, logo_url, host_id, metadata }
     let subjects = []; // { id, name }
     let selectedRoomLogoUrl = null;
+    let excelQuestions = [];
+    let excelErrors = [];
 
     const ROOM_LOGO_BUCKET = 'room-assets';
 
@@ -688,6 +729,198 @@
       tabQuestionsBtn.classList.toggle('active', !isRoom);
       panelRoom.classList.toggle('active', isRoom);
       panelQuestions.classList.toggle('active', !isRoom);
+    }
+
+    function normalizeRowKeys(row) {
+      const out = {};
+      Object.entries(row || {}).forEach(([k, v]) => {
+        if (!k) return;
+        out[k.toString().trim().toLowerCase()] = v;
+      });
+      return out;
+    }
+
+    function mapCorrectAnswer(questionType, value) {
+      const v = normalizeStr(value).toLowerCase();
+      if (questionType === 'true_false') {
+        if (v === 'true' || v === 'صح' || v === 'صحيح' || v === 'yes') return 'صح';
+        if (v === 'false' || v === 'خطأ' || v === 'غلط' || v === 'no') return 'خطأ';
+      }
+      return value ?? '';
+    }
+
+    function parseExcelRows(rows) {
+      excelQuestions = [];
+      excelErrors = [];
+      rows.forEach((row, idx) => {
+        const line = idx + 2; // considering header row at 1
+        const r = normalizeRowKeys(row);
+        const questionText = normalizeStr(r['question_text']);
+        const questionType = normalizeStr(r['question_type']) || 'multiple_choice';
+        const optionA = normalizeStr(r['option_a']);
+        const optionB = normalizeStr(r['option_b']);
+        const optionC = normalizeStr(r['option_c']);
+        const optionD = normalizeStr(r['option_d']);
+        const difficultyRaw = Number(r['difficulty'] || 1);
+        const chapter = normalizeStr(r['chapter']);
+        const lesson = normalizeStr(r['lesson']);
+        const correctAnswerRaw = mapCorrectAnswer(questionType, r['correct_answer']);
+
+        if (!questionText) {
+          excelErrors.push(`سطر ${line}: question_text فارغ`);
+          return;
+        }
+        if (!['multiple_choice', 'true_false', 'open'].includes(questionType)) {
+          excelErrors.push(`سطر ${line}: question_type غير مدعوم (${questionType})`);
+          return;
+        }
+
+        let options = [];
+        let correctAnswer = correctAnswerRaw;
+
+        if (questionType === 'multiple_choice') {
+          options = [optionA, optionB, optionC, optionD].filter((v) => v);
+          if (options.length < 2) {
+            excelErrors.push(`سطر ${line}: مطلوب اختيارين على الأقل (option_a, option_b ...)`);
+            return;
+          }
+          if (!correctAnswer) {
+            excelErrors.push(`سطر ${line}: correct_answer مطلوب`);
+            return;
+          }
+        } else if (questionType === 'true_false') {
+          options = ['صح', 'خطأ'];
+          if (!correctAnswer || !['صح', 'خطأ', 'true', 'false', 'صحيح', 'خطأ', 'غلط'].includes(correctAnswer.toLowerCase ? correctAnswer.toLowerCase() : correctAnswer)) {
+            excelErrors.push(`سطر ${line}: correct_answer يجب أن يكون صح/خطأ`);
+            return;
+          }
+          correctAnswer = mapCorrectAnswer('true_false', correctAnswer);
+        } else {
+          // open
+          if (!correctAnswer) correctAnswer = '—';
+          options = [];
+        }
+
+        const difficulty = isNaN(difficultyRaw) ? 1 : Math.max(1, Math.min(5, difficultyRaw));
+
+        excelQuestions.push({
+          question_text: questionText,
+          question_type: questionType,
+          options,
+          correct_answer: correctAnswer,
+          difficulty,
+          chapter: chapter || null,
+          lesson: lesson || null,
+        });
+      });
+    }
+
+    function renderExcelPreview() {
+      const total = excelQuestions.length;
+      const errors = excelErrors.length;
+      const sample = excelQuestions.slice(0, 5);
+      let html = `<div class=\"status ${errors ? 'error' : 'success'}\">تم تجهيز ${total} سؤال${errors ? `، أخطاء: ${errors}` : ''}</div>`;
+      if (errors) {
+        const firstErrors = excelErrors.slice(0, 5).map((e) => `<li>${e}</li>`).join('');
+        html += `<p class=\"muted\" style=\"margin:6px 0 4px;\">أول الأخطاء:</p><ul class=\"muted\" style=\"margin:0 0 8px 0; padding-left:16px;\">${firstErrors}</ul>`;
+      }
+      if (sample.length) {
+        html += `<table class=\"preview-table\"><thead><tr><th>#</th><th>النص</th><th>النوع</th><th>الإجابة</th><th>الاختيارات</th></tr></thead><tbody>`;
+        sample.forEach((q, idx) => {
+          html += `<tr><td>${idx + 1}</td><td>${q.question_text.slice(0, 60)}</td><td>${q.question_type}</td><td>${q.correct_answer}</td><td>${(q.options || []).join(' | ')}</td></tr>`;
+        });
+        html += `</tbody></table>`;
+      }
+      excelPreview.innerHTML = html;
+      uploadExcelBtn.style.display = total > 0 && !errors ? 'inline-flex' : 'none';
+    }
+
+    function setExcelStatus(msg, variant = 'muted') {
+      setStatus(excelStatus, msg, variant);
+    }
+
+    async function handleParseExcel() {
+      const file = excelFileInput.files?.[0];
+      if (!file) {
+        setExcelStatus('اختر ملف xlsx أولاً', 'error');
+        return;
+      }
+      setExcelStatus('جارٍ قراءة الملف...', 'muted');
+      try {
+        const buf = await file.arrayBuffer();
+        const workbook = XLSX.read(buf, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        parseExcelRows(rows);
+        setExcelStatus(`تمت القراءة: ${excelQuestions.length} سؤال`, excelErrors.length ? 'error' : 'success');
+        renderExcelPreview();
+      } catch (e) {
+        console.error('parseExcel error', e);
+        setExcelStatus('فشل قراءة الملف: ' + e.message, 'error');
+        excelPreview.innerHTML = '';
+        uploadExcelBtn.style.display = 'none';
+      }
+    }
+
+    async function handleUploadExcel() {
+      const roomId = roomsSelect.value;
+      const allowed = allowedRooms.find((r) => r.room_id === roomId);
+      if (!allowed) {
+        setExcelStatus('ليست لديك صلاحية على هذه الغرفة', 'error');
+        return;
+      }
+      if (!excelQuestions.length || excelErrors.length) {
+        setExcelStatus('لا توجد أسئلة جاهزة للرفع (أصلح الأخطاء أولاً)', 'error');
+        return;
+      }
+      const subject = normalizeStr(subjectSelect.value) || 'غير محدد';
+      const term = normalizeStr(termSelect.value) || 'غير محدد';
+      const gradeLevel = normalizeStr(gradeLevelInput.value) || 'غير محدد';
+      const educationType = normalizeStr(educationTypeInput.value) || 'غير محدد';
+
+      uploadExcelBtn.disabled = true;
+      parseExcelBtn.disabled = true;
+      setExcelStatus('جارٍ رفع الدفعة...', 'muted');
+
+      let success = 0;
+      const fail = [];
+      for (let i = 0; i < excelQuestions.length; i++) {
+        const q = excelQuestions[i];
+        const payload = {
+          room_id: roomId,
+          created_by: currentUser.id,
+          question_text: q.question_text,
+          question_type: q.question_type,
+          correct_answer: q.question_type === 'open' ? (q.correct_answer || '—') : q.correct_answer,
+          options: q.options && q.options.length ? q.options : null,
+          grade_level: gradeLevel,
+          education_type: educationType,
+          subject,
+          term,
+          chapter: q.chapter || null,
+          lesson: q.lesson || null,
+          difficulty: q.difficulty,
+          is_active: true,
+        };
+        const { error } = await client.from('quiz_questions').insert(payload);
+        if (error) {
+          fail.push(`سطر ${i + 1}: ${error.message}`);
+        } else {
+          success += 1;
+        }
+      }
+
+      if (fail.length) {
+        setExcelStatus(`تم رفع ${success} سؤال، أخطاء: ${fail.length} (أول خطأ: ${fail[0]})`, 'error');
+      } else {
+        setExcelStatus(`تم رفع كل الأسئلة (${success}) بنجاح`, 'success');
+        excelPreview.innerHTML = '';
+        excelFileInput.value = '';
+        excelQuestions = [];
+      }
+      uploadExcelBtn.disabled = false;
+      parseExcelBtn.disabled = false;
     }
 
     async function fetchAllowedRooms() {
@@ -1077,6 +1310,8 @@
     addSubjectBtn.addEventListener('click', addSubject);
     tabRoomBtn.addEventListener('click', () => setActiveTab('room'));
     tabQuestionsBtn.addEventListener('click', () => setActiveTab('questions'));
+    parseExcelBtn.addEventListener('click', handleParseExcel);
+    uploadExcelBtn.addEventListener('click', handleUploadExcel);
 
     initSession();
     handleQuestionTypeChange();
