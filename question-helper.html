@@ -163,6 +163,49 @@
       text-align: right;
     }
     .questions-table tr:last-child td { border-bottom: none; }
+    .members-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .members-table th,
+    .members-table td {
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      padding: 8px;
+      font-size: 13px;
+      vertical-align: top;
+    }
+    .members-table th {
+      background: #fff8f0;
+      font-weight: 900;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .members-table tr:last-child td { border-bottom: none; }
+    .avatar-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: #fafafa;
+      object-fit: cover;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .pill {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: #fff;
+      white-space: nowrap;
+    }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
     .upload-box {
@@ -499,6 +542,7 @@
           <div class="actions" style="flex-direction:column;">
             <button type="button" id="tab-room" class="tab-btn active">بيانات الغرفة</button>
             <button type="button" id="tab-questions" class="tab-btn">الأسئلة</button>
+            <button type="button" id="tab-members" class="tab-btn">أعضاء الغرفة</button>
             <div id="questions-side-subnav" class="side-subnav">
               <button type="button" id="questions-subtab-single" class="subtab-btn active">إضافة سؤال</button>
               <button type="button" id="questions-subtab-bulk" class="subtab-btn">إضافة مجموعة أسئلة</button>
@@ -681,6 +725,25 @@
       </div>
     </div>
           </div>
+
+          <div id="panel-members" class="tab-panel">
+            <div class="card" style="margin-top:0;">
+              <p class="title">👥 إدارة أعضاء الغرفة</p>
+              <div class="upload-box" style="background:#fff;">
+                <div class="row" style="align-items:end;">
+                  <div>
+                    <label for="members-search">بحث (بالاسم)</label>
+                    <input id="members-search" type="text" placeholder="اكتب اسم..." />
+                  </div>
+                  <div class="actions" style="margin-top:0; gap:8px; justify-content:flex-start;">
+                    <button type="button" id="members-refresh-btn" style="background:#5f5f5f; box-shadow:none;">تحديث</button>
+                  </div>
+                </div>
+                <div id="members-status" class="status muted" style="margin-top:8px;"></div>
+                <div id="members-container"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -803,8 +866,10 @@
 
     const tabRoomBtn = document.getElementById('tab-room');
     const tabQuestionsBtn = document.getElementById('tab-questions');
+    const tabMembersBtn = document.getElementById('tab-members');
     const panelRoom = document.getElementById('panel-room');
     const panelQuestions = document.getElementById('panel-questions');
+    const panelMembers = document.getElementById('panel-members');
     const brandRoomName = document.getElementById('brand-room-name');
     const excelFileInput = document.getElementById('excel-file');
     const parseExcelBtn = document.getElementById('parse-excel-btn');
@@ -839,6 +904,14 @@
     const questionsPageInfo = document.getElementById('questions-page-info');
     const questionsListStatus = document.getElementById('questions-list-status');
     const questionsListContainer = document.getElementById('questions-list-container');
+
+    const membersSearchInput = document.getElementById('members-search');
+    const membersRefreshBtn = document.getElementById('members-refresh-btn');
+    const membersStatus = document.getElementById('members-status');
+    const membersContainer = document.getElementById('members-container');
+
+    let currentMembers = []; // [{user_id, display_name, role, is_host, status, avatar_url, nickname, nickname_discriminator}]
+    let memberStatsByUserId = {}; // { [userId]: {correct_answers, wrong_answers, total_score, attempts_count} }
 
     const editQuestionModal = document.getElementById('edit-question-modal');
     const closeEditQuestionModalBtn = document.getElementById('close-edit-question-modal-btn');
@@ -1068,15 +1141,293 @@
 
     function setActiveTab(which) {
       const isRoom = which === 'room';
+      const isQuestions = which === 'questions';
+      const isMembers = which === 'members';
+
       tabRoomBtn.classList.toggle('active', isRoom);
-      tabQuestionsBtn.classList.toggle('active', !isRoom);
+      if (tabQuestionsBtn) tabQuestionsBtn.classList.toggle('active', isQuestions);
+      if (tabMembersBtn) tabMembersBtn.classList.toggle('active', isMembers);
+
       panelRoom.classList.toggle('active', isRoom);
-      panelQuestions.classList.toggle('active', !isRoom);
+      panelQuestions.classList.toggle('active', isQuestions);
+      if (panelMembers) panelMembers.classList.toggle('active', isMembers);
+
       if (questionsSideSubnav) {
-        questionsSideSubnav.style.display = isRoom ? 'none' : 'block';
+        questionsSideSubnav.style.display = isQuestions ? 'block' : 'none';
       }
-      if (!isRoom) {
+      if (isQuestions) {
         setActiveQuestionsSubTab('single');
+      }
+      if (isMembers) {
+        loadRoomMembers();
+      }
+    }
+
+    function isSelectedRoomOwner() {
+      const allowed = allowedRooms.find((r) => r.room_id === roomsSelect.value);
+      if (!allowed || !currentUser) return false;
+      if (allowed.role === 'owner') return true;
+      if (allowed.host_id && allowed.host_id === currentUser.id) return true;
+      return false;
+    }
+
+    function isSelectedRoomAdminOrOwner() {
+      const allowed = allowedRooms.find((r) => r.room_id === roomsSelect.value);
+      if (!allowed) return false;
+      return allowed.role === 'owner' || allowed.role === 'admin';
+    }
+
+    function buildMemberDisplayName(m) {
+      const dn = normalizeStr(m.display_name);
+      if (dn) return dn;
+      const nick = normalizeStr(m.nickname);
+      const disc = normalizeStr(m.nickname_discriminator);
+      if (nick && disc && disc.length === 4) return `${nick}#${disc}`;
+      if (nick) return nick;
+      return 'مشارك';
+    }
+
+    async function loadRoomMembers() {
+      if (!membersStatus || !membersContainer) return;
+      membersContainer.innerHTML = '';
+
+      if (!currentUser) {
+        membersStatus.textContent = 'سجّل الدخول أولاً.';
+        membersStatus.className = 'status error';
+        return;
+      }
+
+      const allowed = allowedRooms.find((r) => r.room_id === roomsSelect.value);
+      if (!allowed) {
+        membersStatus.textContent = 'اختر غرفة صالحة أولاً.';
+        membersStatus.className = 'status error';
+        return;
+      }
+
+      membersStatus.textContent = 'جارٍ تحميل الأعضاء...';
+      membersStatus.className = 'status muted';
+
+      try {
+        const roomId = roomsSelect.value;
+        const search = normalizeStr(membersSearchInput ? membersSearchInput.value : '');
+
+        // 1) Load members + profiles (avatar/nickname)
+        let q = client
+          .from('room_members')
+          .select('user_id, display_name, role, is_host, status, user_profiles(id, avatar_url, nickname, nickname_discriminator)')
+          .eq('room_id', roomId);
+
+        const { data, error } = await q;
+        if (error) {
+          membersStatus.textContent = 'فشل تحميل الأعضاء: ' + error.message;
+          membersStatus.className = 'status error';
+          return;
+        }
+
+        const raw = Array.isArray(data) ? data : [];
+        currentMembers = raw.map((row) => {
+          const up = row.user_profiles || {};
+          return {
+            user_id: row.user_id,
+            display_name: row.display_name,
+            role: row.role,
+            is_host: row.is_host,
+            status: row.status,
+            avatar_url: up.avatar_url,
+            nickname: up.nickname,
+            nickname_discriminator: up.nickname_discriminator,
+          };
+        });
+
+        // 2) Load stats using RPC (leaderboard)
+        memberStatsByUserId = {};
+        try {
+          const stats = await client.rpc('get_room_quiz_statistics', { p_room_id: roomId });
+          const map = (stats && typeof stats === 'object') ? stats : null;
+          const leaderboard = map && Array.isArray(map.leaderboard) ? map.leaderboard : [];
+          leaderboard.forEach((it) => {
+            const uid = normalizeStr(it.user_id);
+            if (!uid) return;
+            memberStatsByUserId[uid] = {
+              correct_answers: Number(it.correct_answers || 0) || 0,
+              wrong_answers: Number(it.wrong_answers || 0) || 0,
+              total_score: Number(it.total_score || 0) || 0,
+              attempts_count: Number(it.attempts_count || 0) || 0,
+              avatar_url: it.avatar_url,
+              display_name: it.display_name,
+            };
+          });
+        } catch (e) {
+          // ignore stats failure; still show members
+          console.warn('get_room_quiz_statistics failed', e);
+        }
+
+        // Filter & sort
+        if (search) {
+          const s = search.toLowerCase();
+          currentMembers = currentMembers.filter((m) => buildMemberDisplayName(m).toLowerCase().includes(s));
+        }
+
+        const isOwner = isSelectedRoomOwner();
+        currentMembers.sort((a, b) => {
+          const ra = normalizeStr(a.role);
+          const rb = normalizeStr(b.role);
+          const aOwner = a.is_host || ra === 'owner';
+          const bOwner = b.is_host || rb === 'owner';
+          if (aOwner && !bOwner) return -1;
+          if (!aOwner && bOwner) return 1;
+          const aAdmin = ra === 'admin';
+          const bAdmin = rb === 'admin';
+          if (aAdmin && !bAdmin) return -1;
+          if (!aAdmin && bAdmin) return 1;
+          return buildMemberDisplayName(a).localeCompare(buildMemberDisplayName(b));
+        });
+
+        renderMembersTable(isOwner);
+      } catch (e) {
+        console.error('loadRoomMembers error', e);
+        membersStatus.textContent = 'حدث خطأ أثناء تحميل الأعضاء.';
+        membersStatus.className = 'status error';
+      }
+    }
+
+    function renderMembersTable(isOwner) {
+      if (!membersContainer || !membersStatus) return;
+      const canManage = isSelectedRoomAdminOrOwner();
+      const roomId = roomsSelect.value;
+
+      const escapeHtml = (s) => (s ?? '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const roleLabel = (m) => {
+        const r = normalizeStr(m.role).toLowerCase();
+        if (m.is_host || r === 'owner') return 'Owner';
+        if (r === 'admin') return 'Admin';
+        return 'Member';
+      };
+
+      let html = '';
+      html += '<table class="members-table">';
+      html += '<thead><tr>';
+      html += '<th style="width:44px;">#</th>';
+      html += '<th style="width:52px;">صورة</th>';
+      html += '<th>الاسم</th>';
+      html += '<th style="width:90px;">الدور</th>';
+      html += '<th style="width:90px;">محاولات</th>';
+      html += '<th style="width:90px;">صحيح</th>';
+      html += '<th style="width:90px;">خطأ</th>';
+      html += '<th style="width:90px;">نقاط</th>';
+      html += '<th style="width:220px;">إجراءات</th>';
+      html += '</tr></thead>';
+      html += '<tbody>';
+
+      currentMembers.forEach((m, idx) => {
+        const uid = normalizeStr(m.user_id);
+        const stats = memberStatsByUserId[uid] || {};
+        const name = buildMemberDisplayName(m);
+        const role = roleLabel(m);
+        const isSelf = currentUser && uid === currentUser.id;
+        const isTargetOwner = m.is_host || normalizeStr(m.role).toLowerCase() === 'owner';
+        const canKick = canManage && !isSelf && !isTargetOwner;
+        const canPromoteDemote = isOwner && !isSelf && !isTargetOwner;
+        const targetIsAdmin = normalizeStr(m.role).toLowerCase() === 'admin';
+        const avatar = normalizeStr(m.avatar_url) || normalizeStr(stats.avatar_url);
+
+        html += '<tr>';
+        html += `<td>${idx + 1}</td>`;
+        html += `<td>${avatar ? `<img class=\"avatar-dot\" src=\"${escapeHtml(avatar)}\" alt=\"avatar\" onerror=\"this.style.display='none';\" />` : '<span class="pill">-</span>'}</td>`;
+        html += `<td>${escapeHtml(name)}${isSelf ? ' <span class="pill">أنت</span>' : ''}</td>`;
+        html += `<td><span class="pill">${escapeHtml(role)}</span></td>`;
+        html += `<td>${escapeHtml(stats.attempts_count ?? 0)}</td>`;
+        html += `<td>${escapeHtml(stats.correct_answers ?? 0)}</td>`;
+        html += `<td>${escapeHtml(stats.wrong_answers ?? 0)}</td>`;
+        html += `<td>${escapeHtml(stats.total_score ?? 0)}</td>`;
+        html += '<td>';
+        html += `<button type=\"button\" data-action=\"kick\" data-id=\"${escapeHtml(uid)}\" ${canKick ? '' : 'disabled'} class=\"ghost-btn\" style=\"color:#2f241f; border-color:#c6b299; padding:8px 10px; min-width:auto;\">طرد</button>`;
+        html += `<button type=\"button\" data-action=\"promote\" data-id=\"${escapeHtml(uid)}\" ${canPromoteDemote && !targetIsAdmin ? '' : 'disabled'} style=\"background:#5f5f5f; box-shadow:none; padding:8px 10px; min-width:auto; margin-right:8px;\">ترقية Admin</button>`;
+        html += `<button type=\"button\" data-action=\"demote\" data-id=\"${escapeHtml(uid)}\" ${canPromoteDemote && targetIsAdmin ? '' : 'disabled'} class=\"ghost-btn\" style=\"color:#2f241f; border-color:#c6b299; padding:8px 10px; min-width:auto; margin-right:8px;\">إزالة الترقية</button>`;
+        html += '</td>';
+        html += '</tr>';
+      });
+
+      html += '</tbody></table>';
+      membersContainer.innerHTML = html;
+
+      membersContainer.querySelectorAll('button[data-action="kick"]').forEach((btn) => {
+        btn.addEventListener('click', () => kickMember(btn.getAttribute('data-id')));
+      });
+      membersContainer.querySelectorAll('button[data-action="promote"]').forEach((btn) => {
+        btn.addEventListener('click', () => updateMemberRole(btn.getAttribute('data-id'), 'admin'));
+      });
+      membersContainer.querySelectorAll('button[data-action="demote"]').forEach((btn) => {
+        btn.addEventListener('click', () => updateMemberRole(btn.getAttribute('data-id'), 'member'));
+      });
+
+      membersStatus.textContent = `عدد الأعضاء: ${currentMembers.length}`;
+      membersStatus.className = 'status muted';
+    }
+
+    async function kickMember(userId) {
+      const uid = normalizeStr(userId);
+      if (!uid) return;
+      if (!currentUser) return;
+      if (!isSelectedRoomAdminOrOwner()) {
+        alert('ليست لديك صلاحية للطرد.');
+        return;
+      }
+      if (uid === currentUser.id) {
+        alert('لا يمكنك طرد نفسك.');
+        return;
+      }
+      const target = currentMembers.find((m) => normalizeStr(m.user_id) === uid);
+      if (target && (target.is_host || normalizeStr(target.role).toLowerCase() === 'owner')) {
+        alert('لا يمكن طرد المالك.');
+        return;
+      }
+      const name = target ? buildMemberDisplayName(target) : uid;
+      if (!confirm(`تأكيد طرد العضو: ${name} ؟`)) return;
+      try {
+        const { error } = await client.from('room_members').delete().match({ room_id: roomsSelect.value, user_id: uid });
+        if (error) {
+          alert('فشل الطرد: ' + error.message);
+          return;
+        }
+        loadRoomMembers();
+      } catch (e) {
+        console.error('kickMember error', e);
+        alert('حدث خطأ أثناء الطرد.');
+      }
+    }
+
+    async function updateMemberRole(userId, role) {
+      const uid = normalizeStr(userId);
+      const r = normalizeStr(role).toLowerCase();
+      if (!uid || !(r === 'admin' || r === 'member')) return;
+      if (!currentUser) return;
+      if (!isSelectedRoomOwner()) {
+        alert('هذه العملية للمالك فقط.');
+        return;
+      }
+      if (uid === currentUser.id) {
+        alert('لا يمكنك تعديل دورك من هنا.');
+        return;
+      }
+      const target = currentMembers.find((m) => normalizeStr(m.user_id) === uid);
+      if (target && (target.is_host || normalizeStr(target.role).toLowerCase() === 'owner')) {
+        alert('لا يمكن تعديل دور المالك.');
+        return;
+      }
+      const name = target ? buildMemberDisplayName(target) : uid;
+      const label = r === 'admin' ? 'ترقية إلى Admin' : 'إزالة الترقية إلى Member';
+      if (!confirm(`${label}\n\nالعضو: ${name}`)) return;
+      try {
+        const { error } = await client.from('room_members').update({ role: r }).match({ room_id: roomsSelect.value, user_id: uid });
+        if (error) {
+          alert('فشل التعديل: ' + error.message);
+          return;
+        }
+        loadRoomMembers();
+      } catch (e) {
+        console.error('updateMemberRole error', e);
+        alert('حدث خطأ أثناء تعديل الدور.');
       }
     }
 
@@ -2205,9 +2556,12 @@
     addSubjectBtn.addEventListener('click', addSubject);
     tabRoomBtn.addEventListener('click', () => setActiveTab('room'));
     tabQuestionsBtn.addEventListener('click', () => setActiveTab('questions'));
+    if (tabMembersBtn) tabMembersBtn.addEventListener('click', () => setActiveTab('members'));
     if (questionsSubtabSingleBtn) questionsSubtabSingleBtn.addEventListener('click', () => setActiveQuestionsSubTab('single'));
     if (questionsSubtabBulkBtn) questionsSubtabBulkBtn.addEventListener('click', () => setActiveQuestionsSubTab('bulk'));
     if (questionsSubtabViewBtn) questionsSubtabViewBtn.addEventListener('click', () => setActiveQuestionsSubTab('view'));
+    if (membersRefreshBtn) membersRefreshBtn.addEventListener('click', loadRoomMembers);
+    if (membersSearchInput) membersSearchInput.addEventListener('input', loadRoomMembers);
     if (questionsRefreshBtn) questionsRefreshBtn.addEventListener('click', () => { questionsPage = 0; loadRoomQuestions(); });
     if (questionsSearchInput) questionsSearchInput.addEventListener('input', () => { questionsPage = 0; loadRoomQuestions(); });
     if (questionsPrevBtn) questionsPrevBtn.addEventListener('click', () => { questionsPage = Math.max(0, questionsPage - 1); loadRoomQuestions(); });
