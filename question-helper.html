@@ -1299,16 +1299,17 @@
 
         const isOwner = isSelectedRoomOwner();
         currentMembers.sort((a, b) => {
-          const ra = normalizeStr(a.role);
-          const rb = normalizeStr(b.role);
-          const aOwner = a.is_host || ra === 'owner';
-          const bOwner = b.is_host || rb === 'owner';
-          if (aOwner && !bOwner) return -1;
-          if (!aOwner && bOwner) return 1;
-          const aAdmin = ra === 'admin';
-          const bAdmin = rb === 'admin';
-          if (aAdmin && !bAdmin) return -1;
-          if (!aAdmin && bAdmin) return 1;
+          const sa = memberStatsByUserId[normalizeStr(a.user_id)] || {};
+          const sb = memberStatsByUserId[normalizeStr(b.user_id)] || {};
+          const scoreA = Number(sa.total_score ?? 0) || 0;
+          const scoreB = Number(sb.total_score ?? 0) || 0;
+          if (scoreA !== scoreB) return scoreB - scoreA;
+          const attemptsA = Number(sa.attempts_count ?? 0) || 0;
+          const attemptsB = Number(sb.attempts_count ?? 0) || 0;
+          if (attemptsA !== attemptsB) return attemptsB - attemptsA;
+          const correctA = Number(sa.correct_answers ?? 0) || 0;
+          const correctB = Number(sb.correct_answers ?? 0) || 0;
+          if (correctA !== correctB) return correctB - correctA;
           return buildMemberDisplayName(a).localeCompare(buildMemberDisplayName(b));
         });
 
