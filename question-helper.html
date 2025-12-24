@@ -1270,8 +1270,9 @@
         // 2) Load stats using RPC (leaderboard)
         memberStatsByUserId = {};
         try {
-          const stats = await client.rpc('get_room_quiz_statistics', { p_room_id: roomId });
-          const map = (stats && typeof stats === 'object') ? stats : null;
+          const statsRes = await client.rpc('get_room_quiz_statistics', { p_room_id: roomId });
+          if (statsRes && statsRes.error) throw statsRes.error;
+          const map = (statsRes && typeof statsRes === 'object') ? statsRes.data : null;
           const leaderboard = map && Array.isArray(map.leaderboard) ? map.leaderboard : [];
           leaderboard.forEach((it) => {
             const uid = normalizeStr(it.user_id);
