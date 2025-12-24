@@ -1370,9 +1370,16 @@
         html += `<td>${escapeHtml(stats.wrong_answers ?? 0)}</td>`;
         html += `<td>${escapeHtml(stats.total_score ?? 0)}</td>`;
         html += '<td>';
-        html += `<button type=\"button\" data-action=\"kick\" data-id=\"${escapeHtml(uid)}\" ${canKick ? '' : 'disabled'} class=\"ghost-btn\" style=\"color:#2f241f; border-color:#c6b299; padding:8px 10px; min-width:auto;\">طرد</button>`;
-        html += `<button type=\"button\" data-action=\"promote\" data-id=\"${escapeHtml(uid)}\" ${canPromoteDemote && !targetIsAdmin ? '' : 'disabled'} style=\"background:#5f5f5f; box-shadow:none; padding:8px 10px; min-width:auto; margin-right:8px;\">ترقية Admin</button>`;
-        html += `<button type=\"button\" data-action=\"demote\" data-id=\"${escapeHtml(uid)}\" ${canPromoteDemote && targetIsAdmin ? '' : 'disabled'} class=\"ghost-btn\" style=\"color:#2f241f; border-color:#c6b299; padding:8px 10px; min-width:auto; margin-right:8px;\">إزالة الترقية</button>`;
+        html += `<button type="button" data-action="kick" data-id="${escapeHtml(uid)}" ${canKick ? '' : 'disabled'} class="ghost-btn" style="color:#2f241f; border-color:#c6b299; padding:8px 10px; min-width:auto;">طرد</button>`;
+        if (canPromoteDemote) {
+          const nextRole = targetIsAdmin ? 'member' : 'admin';
+          const label = targetIsAdmin ? 'إزالة الترقية' : 'ترقية Admin';
+          const btnClass = targetIsAdmin ? 'ghost-btn' : '';
+          const btnStyle = targetIsAdmin
+            ? 'color:#2f241f; border-color:#c6b299; padding:8px 10px; min-width:auto; margin-right:8px;'
+            : 'background:#5f5f5f; box-shadow:none; padding:8px 10px; min-width:auto; margin-right:8px;';
+          html += `<button type="button" data-action="toggle-admin" data-id="${escapeHtml(uid)}" data-role="${escapeHtml(nextRole)}" class="${btnClass}" style="${btnStyle}">${label}</button>`;
+        }
         html += '</td>';
         html += '</tr>';
       });
@@ -1383,11 +1390,8 @@
       membersContainer.querySelectorAll('button[data-action="kick"]').forEach((btn) => {
         btn.addEventListener('click', () => kickMember(btn.getAttribute('data-id')));
       });
-      membersContainer.querySelectorAll('button[data-action="promote"]').forEach((btn) => {
-        btn.addEventListener('click', () => updateMemberRole(btn.getAttribute('data-id'), 'admin'));
-      });
-      membersContainer.querySelectorAll('button[data-action="demote"]').forEach((btn) => {
-        btn.addEventListener('click', () => updateMemberRole(btn.getAttribute('data-id'), 'member'));
+      membersContainer.querySelectorAll('button[data-action="toggle-admin"]').forEach((btn) => {
+        btn.addEventListener('click', () => updateMemberRole(btn.getAttribute('data-id'), btn.getAttribute('data-role')));
       });
 
       membersStatus.textContent = `عدد الأعضاء: ${currentMembers.length}`;
@@ -1445,7 +1449,7 @@
         return;
       }
       const name = target ? buildMemberDisplayName(target) : uid;
-      const label = r === 'admin' ? 'ترقية إلى Admin' : 'إزالة الترقية إلى Member';
+      const label = r === 'admin' ? 'ترقية إلى Admin' : 'إزالة الترقية';
       if (!confirm(`${label}\n\nالعضو: ${name}`)) return;
       try {
         const { error } = await client.from('room_members').update({ role: r }).match({ room_id: roomsSelect.value, user_id: uid });
