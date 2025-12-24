@@ -542,12 +542,12 @@
           <div class="actions" style="flex-direction:column;">
             <button type="button" id="tab-room" class="tab-btn active">بيانات الغرفة</button>
             <button type="button" id="tab-questions" class="tab-btn">الأسئلة</button>
-            <button type="button" id="tab-members" class="tab-btn">أعضاء الغرفة</button>
             <div id="questions-side-subnav" class="side-subnav">
               <button type="button" id="questions-subtab-single" class="subtab-btn active">إضافة سؤال</button>
               <button type="button" id="questions-subtab-bulk" class="subtab-btn">إضافة مجموعة أسئلة</button>
               <button type="button" id="questions-subtab-view" class="subtab-btn">عرض الأسئلة</button>
             </div>
+            <button type="button" id="tab-members" class="tab-btn">أعضاء الغرفة</button>
           </div>
         </aside>
 
@@ -1196,6 +1196,19 @@
       return 'مشارك';
     }
 
+    function normalizeSearchText(input) {
+      const s = (input ?? '').toString().trim().toLowerCase();
+      if (!s) return '';
+      return s
+        .replace(/[\u064B-\u065F\u0670]/g, '')
+        .replace(/\u0640/g, '')
+        .replace(/[\u0622\u0623\u0625\u0671]/g, '\u0627')
+        .replace(/\u0629/g, '\u0647')
+        .replace(/\u0649/g, '\u064A')
+        .replace(/\u0624/g, '\u0648')
+        .replace(/\u0626/g, '\u064A');
+    }
+
     async function loadRoomMembers() {
       if (!membersStatus || !membersContainer) return;
       membersContainer.innerHTML = '';
@@ -1218,7 +1231,7 @@
 
       try {
         const roomId = roomsSelect.value;
-        const search = normalizeStr(membersSearchInput ? membersSearchInput.value : '');
+        const search = normalizeSearchText(membersSearchInput ? membersSearchInput.value : '');
 
         // 1) Load members first (no join) ثم نجلب ملفات المستخدمين في استعلام منفصل.
         const { data: membersData, error: membersError } = await client
@@ -1293,8 +1306,7 @@
 
         // Filter & sort
         if (search) {
-          const s = search.toLowerCase();
-          currentMembers = currentMembers.filter((m) => buildMemberDisplayName(m).toLowerCase().includes(s));
+          currentMembers = currentMembers.filter((m) => normalizeSearchText(buildMemberDisplayName(m)).includes(search));
         }
 
         const isOwner = isSelectedRoomOwner();
@@ -1341,7 +1353,6 @@
       html += '<th style="width:52px;">صورة</th>';
       html += '<th>الاسم</th>';
       html += '<th style="width:90px;">الدور</th>';
-      html += '<th style="width:90px;">محاولات</th>';
       html += '<th style="width:90px;">صحيح</th>';
       html += '<th style="width:90px;">خطأ</th>';
       html += '<th style="width:90px;">نقاط</th>';
@@ -1366,7 +1377,6 @@
         html += `<td>${avatar ? `<img class=\"avatar-dot\" src=\"${escapeHtml(avatar)}\" alt=\"avatar\" onerror=\"this.style.display='none';\" />` : '<span class="pill">-</span>'}</td>`;
         html += `<td>${escapeHtml(name)}${isSelf ? ' <span class="pill">أنت</span>' : ''}</td>`;
         html += `<td><span class="pill">${escapeHtml(role)}</span></td>`;
-        html += `<td>${escapeHtml(stats.attempts_count ?? 0)}</td>`;
         html += `<td>${escapeHtml(stats.correct_answers ?? 0)}</td>`;
         html += `<td>${escapeHtml(stats.wrong_answers ?? 0)}</td>`;
         html += `<td>${escapeHtml(stats.total_score ?? 0)}</td>`;
