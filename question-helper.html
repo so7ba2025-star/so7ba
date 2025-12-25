@@ -89,7 +89,9 @@
       margin-top: 8px;
       padding-right: 10px;
       border-right: 2px solid rgba(255,255,255,0.16);
-      display: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
     .side-subnav .subtab-btn {
       width: 100%;
@@ -103,6 +105,24 @@
     .side-subnav .subtab-btn.active {
       background: rgba(255,255,255,0.20);
       border-color: rgba(255,255,255,0.35);
+    }
+    .bulk-subnav {
+      display: flex;
+      gap: 8px;
+      margin: 0 0 12px;
+      flex-wrap: wrap;
+    }
+    .bulk-subnav .subtab-btn {
+      background: #f5e9d7;
+      color: #2f241f;
+      border: 1px solid #c6b299;
+      box-shadow: none;
+      min-width: 180px;
+    }
+    .bulk-subnav .subtab-btn.active {
+      background: #c6b299;
+      color: #fff;
+      border-color: #a68462;
     }
     .tab-btn {
       width: 100%;
@@ -698,7 +718,7 @@
               </div>
 
               <div id="questions-subpanel-bulk" class="questions-subpanel">
-                <div class="side-subnav" style="margin:0 0 12px; gap:8px;">
+                <div class="bulk-subnav">
                   <button type="button" id="bulk-subtab-pdf" class="subtab-btn active">استيراد من PDF</button>
                   <button type="button" id="bulk-subtab-excel" class="subtab-btn">رفع/توليد (Excel/TSV)</button>
                 </div>
