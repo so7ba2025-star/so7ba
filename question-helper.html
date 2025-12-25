@@ -1106,7 +1106,38 @@
       el.className = `status ${kind}`;
     }
 
+    async function handleAuthRedirect() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        const errorDesc = params.get('error_description');
+        if (errorDesc) {
+          setStatus(authStatus, 'فشل تسجيل الدخول: ' + errorDesc, 'error');
+          window.history.replaceState({}, document.title, window.location.pathname);
+          return false;
+        }
+        if (!code) return false;
+        const { data, error } = await client.auth.exchangeCodeForSession(window.location.href);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        if (error) {
+          setStatus(authStatus, 'فشل إكمال تسجيل الدخول: ' + error.message, 'error');
+          return false;
+        }
+        if (data?.session?.user) {
+          currentUser = data.session.user;
+          onLoginSuccess();
+          return true;
+        }
+      } catch (e) {
+        console.error('handleAuthRedirect error', e);
+        setStatus(authStatus, 'فشل إكمال تسجيل الدخول: ' + (e?.message || e), 'error');
+      }
+      return false;
+    }
+
     async function initSession() {
+      const handled = await handleAuthRedirect();
+      if (handled) return;
       const { data } = await client.auth.getSession();
       if (data.session) {
         currentUser = data.session.user;
