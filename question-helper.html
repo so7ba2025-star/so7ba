@@ -2404,6 +2404,7 @@
     }
 
     function handleParseCsv() {
+      pdfQuestionsActive = false;
       setExcelStatus('جارٍ قراءة النص...', 'muted');
       const fallbackSubject = normalizeStr(subjectSelect?.value);
       const fallbackTerm = normalizeStr(termSelect?.value);
@@ -2415,6 +2416,7 @@
         excelErrors.length ? 'error' : 'success'
       );
       renderExcelPreview();
+      renderPdfQuestionsPreview();
     }
 
     function handleClearCsv() {
@@ -2435,8 +2437,12 @@
       pdfTextPreview.textContent = '';
       excelQuestions = [];
       excelErrors = [];
+      pdfQuestionsActive = false;
       renderExcelPreview();
+      renderPdfQuestionsPreview();
       uploadExcelBtn.style.display = 'none';
+      if (aiPromptActions) aiPromptActions.style.display = 'none';
+      if (aiAnswersTextarea) aiAnswersTextarea.value = '';
       setPdfStatus('تم المسح', 'muted');
     }
 
@@ -2447,8 +2453,10 @@
 
       // جعل كل سؤال يبدأ من سطر جديد: رقم + نقطة/قوس ثم مسافة (فقط عند بداية السطر أو بعد سطر جديد لتجنب كسر "5-digit")
       t = t.replace(/(^|[\n\r])\s*(\d{1,3})\s*[\.\)\-:،]\s+/g, '\n$2. ');
+      // كسر السطر أيضًا قبل أرقام الأسئلة لو جاءت في منتصف السطر بعد اختيار سابق
+      t = t.replace(/(?<!\d)(?:^|\s+)(\d{1,3})\s*\.\s+(?=[A-Za-zأ-ي0-9])/g, '\n$1. ');
 
-      // جعل كل اختيار يبدأ من سطر جديد (a-d أو نظائر عربية/أرقام عربية) مع تقليل الكسر داخل الأرقام الزمنية بإزالة الـ :
+      // جعل كل اختيار يبدأ من سطر جديد (a-d أو نظائر عربية/أرقام عربية)
       t = t.replace(/\s+([A-Da-dأابجده١٢٣٤])[\)\.\-،]\s+/g, '\n$1. ');
 
       // إزالة أرقام ترقيم الصفحات أو الأرقام المنعزلة بين الأسئلة (مثل "d. ... 1 3.")
@@ -2668,6 +2676,7 @@
         const fallbackTerm = normalizeStr(termSelect?.value) || 'term_1';
         const rows = parsePdfQuestions(text, fallbackSubject, fallbackTerm);
 
+        pdfQuestionsActive = true;
         parseExcelRows(rows);
         setPdfStatus(
           excelErrors.length
@@ -2676,13 +2685,16 @@
           excelErrors.length ? 'error' : 'success'
         );
         renderExcelPreview();
+        renderPdfQuestionsPreview();
       } catch (e) {
         console.error('parsePdf error', e);
         setPdfStatus('فشل تحليل PDF: ' + (e?.message || e), 'error');
         pdfTextPreview.textContent = '';
         excelQuestions = [];
         excelErrors = [];
+        pdfQuestionsActive = false;
         renderExcelPreview();
+        renderPdfQuestionsPreview();
       } finally {
         parsePdfBtn.disabled = false;
       }
@@ -3165,6 +3177,12 @@
     setActiveBulkSubtab('excel'); // عرض Excel/TSV افتراضياً مع إمكانية التحويل إلى PDF
     if (parsePdfBtn) parsePdfBtn.addEventListener('click', handleParsePdf);
     if (clearPdfBtn) clearPdfBtn.addEventListener('click', clearPdf);
+    if (pdfQuestionsPreview) {
+      pdfQuestionsPreview.addEventListener('change', handlePdfCorrectChange);
+      pdfQuestionsPreview.addEventListener('input', handlePdfCorrectChange);
+    }
+    if (generateAiPromptBtn) generateAiPromptBtn.addEventListener('click', handleGenerateAiPromptFromPdf);
+    if (applyAiAnswersBtn) applyAiAnswersBtn.addEventListener('click', handleApplyAiAnswersFromPdf);
 
     function buildPromptText(params) {
       const {
