@@ -2316,6 +2316,26 @@
       return questions;
     }
 
+    function loadScriptOnce(url) {
+      return new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[data-pdfjs="${url}"]`);
+        if (existing) {
+          existing.onload = () => resolve();
+          existing.onerror = () => reject(new Error('فشل تحميل ' + url));
+          if (window['pdfjsLib']) return resolve();
+          return;
+        }
+        const s = document.createElement('script');
+        s.src = url;
+        s.async = true;
+        s.defer = true;
+        s.setAttribute('data-pdfjs', url);
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error('فشل تحميل ' + url));
+        document.head.appendChild(s);
+      });
+    }
+
     async function ensurePdfJs() {
       if (window['pdfjsLib']) {
         if (pdfjsLib.GlobalWorkerOptions) {
@@ -2327,7 +2347,7 @@
         pdfJsReadyPromise = (async () => {
           for (const url of PDF_JS_URLS) {
             try {
-              await import(url);
+              await loadScriptOnce(url);
               if (window['pdfjsLib']) {
                 if (pdfjsLib.GlobalWorkerOptions) {
                   pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
