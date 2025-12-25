@@ -7,6 +7,7 @@
   <link rel="icon" type="image/png" href="favicon.png" />
   <script src="https://unpkg.com/@supabase/supabase-js@2" crossorigin="anonymous"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js" crossorigin="anonymous"></script>
   <style>
     :root {
       --bg: #0b0404;
@@ -215,6 +216,31 @@
       background: #fffaf5;
       margin-top: 12px;
     }
+    .pdf-box {
+      border: 1px dashed #c6b299;
+      border-radius: 14px;
+      padding: 12px;
+      background: #fffaf5;
+      margin-top: 12px;
+    }
+    .pdf-preview {
+      width: 100%;
+      min-height: 220px;
+      border: 1px solid #e2d5c5;
+      border-radius: 12px;
+      background: #fff;
+      overflow: auto;
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      direction: rtl;
+    }
+    .pdf-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .pdf-status { margin-top: 8px; font-weight: 800; }
+    .pdf-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .pdf-table th, .pdf-table td { border: 1px solid #e7d9c6; padding: 6px; font-size: 13px; vertical-align: top; }
+    .pdf-table th { background: #f6ede0; text-align: right; }
     .preview-table {
       width: 100%;
       border-collapse: collapse;
@@ -676,6 +702,19 @@
 
       <div id="questions-subpanel-bulk" class="questions-subpanel">
 
+      <div class="pdf-box">
+        <p class="title" style="font-size:18px; margin:0 0 6px;">📑 استخراج أسئلة من PDF (تلقائي)</p>
+        <label for="pdf-file">اختر ملف PDF</label>
+        <input id="pdf-file" type="file" accept="application/pdf" />
+        <div class="pdf-actions">
+          <button type="button" id="parse-pdf-btn" style="background:#5f5f5f; box-shadow:none;">تحليل الملف وملء المعاينة</button>
+          <button type="button" id="clear-pdf-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">مسح</button>
+        </div>
+        <div id="pdf-status" class="pdf-status muted"></div>
+        <div class="pdf-preview" id="pdf-text-preview" style="margin-top:8px;"></div>
+        <div class="muted" style="margin-top:6px; font-weight:800;">بعد التحليل سيتم تعبئة معاينة الأسئلة أدناه بنفس زر "رفع كل الأسئلة".</div>
+      </div>
+
       <div class="divider" style="margin:16px 0;"></div>
       <p class="title" style="font-size:18px;">📤 رفع مجموعة أسئلة من Excel (xlsx)</p>
       <div class="upload-box">
@@ -825,6 +864,9 @@
     const SUPABASE_URL = 'https://hredzoouykvmoczrtugy.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyZWR6b291eWt2bW9jenJ0dWd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNDI2MzAsImV4cCI6MjA3NzgxODYzMH0.4frhZ21FaYyEkrKap7XH74GsaREfbJts_xz77jULqoc';
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    if (window['pdfjsLib']) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js';
+    }
 
     const authCard = document.getElementById('auth-card');
     const appShell = document.getElementById('app-shell');
@@ -889,6 +931,11 @@
     const csvTextarea = document.getElementById('csv-textarea');
     const parseCsvBtn = document.getElementById('parse-csv-btn');
     const clearCsvBtn = document.getElementById('clear-csv-btn');
+    const pdfFileInput = document.getElementById('pdf-file');
+    const parsePdfBtn = document.getElementById('parse-pdf-btn');
+    const clearPdfBtn = document.getElementById('clear-pdf-btn');
+    const pdfStatus = document.getElementById('pdf-status');
+    const pdfTextPreview = document.getElementById('pdf-text-preview');
 
     let currentUser = null;
     let allowedRooms = []; // { room_id, name, role, code, description, logo_url, host_id, metadata }
@@ -2159,6 +2206,168 @@
       excelErrors = [];
     }
 
+    function setPdfStatus(msg, variant = 'muted') {
+      setStatus(pdfStatus, msg, variant);
+    }
+
+    function clearPdf() {
+      pdfFileInput.value = '';
+      pdfTextPreview.textContent = '';
+      excelQuestions = [];
+      excelErrors = [];
+      renderExcelPreview();
+      uploadExcelBtn.style.display = 'none';
+      setPdfStatus('تم المسح', 'muted');
+    }
+
+    function isQuestionStart(line) {
+      const t = normalizeStr(line);
+      return /^((س|q|question)\s*)?[0-9٠-٩]{1,3}[\)\.\-:،]/i.test(t) || /^[0-9]{1,3}\s+/.test(t);
+    }
+
+    function stripQuestionLabel(line) {
+      return normalizeStr(line).replace(/^((س|q|question)\s*)?[0-9٠-٩]{1,3}[\)\.\-:،]\s*/, '').trim();
+    }
+
+    function parseOptionLine(line) {
+      const m = line.match(/^([A-Da-d]|[أابجده]|[١١١|٢٢٢|٣٣٣|٤٤٤]|[1-4])[\)\.\-:،]\s*(.+)$/);
+      if (m && m[2]) {
+        const label = m[1];
+        const text = m[2].trim();
+        return { label, text };
+      }
+      return null;
+    }
+
+    function optionIndexFromLabel(label) {
+      const l = normalizeStr(label).toLowerCase();
+      if (['a', 'أ', 'ا', '١', '1'].includes(l)) return 0;
+      if (['b', 'ب', '٢', '2'].includes(l)) return 1;
+      if (['c', 'ج', '٣', '3'].includes(l)) return 2;
+      if (['d', 'د', '٤', '4'].includes(l)) return 3;
+      return -1;
+    }
+
+    function pickCorrectAnswer(raw, options) {
+      const r = normalizeStr(raw);
+      if (!r) return '';
+      const idx = optionIndexFromLabel(r);
+      if (idx >= 0 && options[idx]) return options[idx];
+      const found = options.find((o) => o && o.trim() === r);
+      return found || r;
+    }
+
+    function parsePdfQuestions(text, fallbackSubject, fallbackTerm) {
+      const lines = (text || '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l);
+      const questions = [];
+      let current = null;
+
+      const pushCurrent = () => {
+        if (!current) return;
+        const questionText = normalizeStr(current.textParts.join(' '));
+        if (!questionText) {
+          current = null;
+          return;
+        }
+        const options = Array.from(new Set(current.options.map((o) => normalizeStr(o)).filter((o) => o))).filter((o) => o);
+        let question_type = options.length >= 2 ? 'multiple_choice' : 'short_answer';
+        let correct_answer = pickCorrectAnswer(current.correct, options);
+        questions.push({
+          subject: fallbackSubject,
+          term: fallbackTerm,
+          question_text: questionText,
+          question_type,
+          option_a: options[0] || '',
+          option_b: options[1] || '',
+          option_c: options[2] || '',
+          option_d: options[3] || '',
+          correct_answer: correct_answer || '',
+          difficulty: 1,
+          chapter: '',
+          lesson: '',
+        });
+        current = null;
+      };
+
+      lines.forEach((line) => {
+        if (isQuestionStart(line)) {
+          pushCurrent();
+          current = { textParts: [stripQuestionLabel(line)], options: [], correct: '' };
+          return;
+        }
+        const opt = parseOptionLine(line);
+        if (opt && current) {
+          current.options.push(opt.text);
+          return;
+        }
+        const correctMatch = line.match(/^(الإجابة|الإجابه|الإجابة الصحيحة|correct answer)\s*[:：\-]\s*(.+)$/i);
+        if (correctMatch && current) {
+          current.correct = correctMatch[2].trim();
+          return;
+        }
+        if (current) {
+          current.textParts.push(line);
+        }
+      });
+      pushCurrent();
+      return questions;
+    }
+
+    async function extractPdfText(arrayBuffer) {
+      if (!window['pdfjsLib']) throw new Error('PDF.js غير متوفر');
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const strings = content.items.map((it) => it.str || '').filter((s) => s);
+        fullText += strings.join(' ') + '\n\n';
+      }
+      return fullText;
+    }
+
+    async function handleParsePdf() {
+      const file = pdfFileInput.files?.[0];
+      if (!file) {
+        setPdfStatus('اختر ملف PDF أولاً', 'error');
+        return;
+      }
+      if (!window['pdfjsLib']) {
+        setPdfStatus('مكتبة PDF.js غير متاحة', 'error');
+        return;
+      }
+      setPdfStatus('جارٍ قراءة الملف وتحليله...', 'muted');
+      parsePdfBtn.disabled = true;
+      try {
+        const buf = await file.arrayBuffer();
+        const text = await extractPdfText(buf);
+        pdfTextPreview.textContent = text.slice(0, 12000);
+
+        const fallbackSubject = normalizeStr(subjectSelect?.value);
+        const fallbackTerm = normalizeStr(termSelect?.value) || 'term_1';
+        const rows = parsePdfQuestions(text, fallbackSubject, fallbackTerm);
+
+        parseExcelRows(rows);
+        setPdfStatus(
+          excelErrors.length
+            ? `تم استخراج ${excelQuestions.length} سؤال، أخطاء: ${excelErrors.length}`
+            : `تم استخراج ${excelQuestions.length} سؤال`,
+          excelErrors.length ? 'error' : 'success'
+        );
+        renderExcelPreview();
+      } catch (e) {
+        console.error('parsePdf error', e);
+        setPdfStatus('فشل تحليل PDF: ' + (e?.message || e), 'error');
+        pdfTextPreview.textContent = '';
+        excelQuestions = [];
+        excelErrors = [];
+        renderExcelPreview();
+      } finally {
+        parsePdfBtn.disabled = false;
+      }
+    }
+
     function handleDownloadTemplate() {
       const headers = [
         'subject',
@@ -2617,6 +2826,8 @@
     downloadTemplateBtn.addEventListener('click', handleDownloadTemplate);
     parseCsvBtn.addEventListener('click', handleParseCsv);
     clearCsvBtn.addEventListener('click', handleClearCsv);
+    if (parsePdfBtn) parsePdfBtn.addEventListener('click', handleParsePdf);
+    if (clearPdfBtn) clearPdfBtn.addEventListener('click', clearPdf);
 
     function buildPromptText(params) {
       const {
