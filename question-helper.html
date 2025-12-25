@@ -619,101 +619,163 @@
 
           <div id="panel-questions" class="tab-panel">
             <div class="card" id="question-card" style="margin-top:0;">
-      <div id="questions-subpanel-single" class="questions-subpanel active">
-      <p class="title">✍️ إضافة سؤال</p>
-      <label for="question_text">نص السؤال</label>
-      <textarea id="question_text" placeholder="اكتب السؤال هنا"></textarea>
+              <div id="questions-subpanel-single" class="questions-subpanel active">
+                <p class="title">✍️ إضافة سؤال</p>
+                <label for="question_text">نص السؤال</label>
+                <textarea id="question_text" placeholder="اكتب السؤال هنا"></textarea>
 
-      <div class="row">
-        <div>
-          <label for="question_type">نوع السؤال</label>
-          <select id="question_type">
-            <option value="multiple_choice">اختيار من متعدد</option>
-            <option value="true_false">صح / خطأ</option>
-            <option value="fill_in_blank">املأ الفراغ</option>
-            <option value="short_answer">إجابة قصيرة</option>
-          </select>
-        </div>
-        <div>
-          <label for="difficulty">درجة الصعوبة (1-5)</label>
-          <input id="difficulty" type="number" min="1" max="5" value="1" />
-        </div>
-      </div>
+                <div class="row">
+                  <div>
+                    <label for="question_type">نوع السؤال</label>
+                    <select id="question_type">
+                      <option value="multiple_choice">اختيار من متعدد</option>
+                      <option value="true_false">صح / خطأ</option>
+                      <option value="fill_in_blank">املأ الفراغ</option>
+                      <option value="short_answer">إجابة قصيرة</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="difficulty">درجة الصعوبة (1-5)</label>
+                    <input id="difficulty" type="number" min="1" max="5" value="1" />
+                  </div>
+                </div>
 
-      <div id="options-group">
-        <label>الاختيارات (كل اختيار في حقل مستقل)</label>
-        <div id="options-container" class="options-container"></div>
-        <div class="actions" style="margin-top:8px;">
-          <button type="button" id="add-option-btn" style="background:#5f5f5f; box-shadow:none;">إضافة اختيار</button>
-        </div>
-      </div>
+                <div id="options-group">
+                  <label>الاختيارات (كل اختيار في حقل مستقل)</label>
+                  <div id="options-container" class="options-container"></div>
+                  <div class="actions" style="margin-top:8px;">
+                    <button type="button" id="add-option-btn" style="background:#5f5f5f; box-shadow:none;">إضافة اختيار</button>
+                  </div>
+                </div>
 
-      <div id="correct-answer-group">
-        <label for="correct_answer_select">الإجابة الصحيحة</label>
-        <select id="correct_answer_select"></select>
-        <input id="correct_answer_text" type="text" placeholder="اكتب الإجابة الصحيحة" style="display:none; margin-top:8px;" />
-      </div>
+                <div id="correct-answer-group">
+                  <label for="correct_answer_select">الإجابة الصحيحة</label>
+                  <select id="correct_answer_select"></select>
+                  <input id="correct_answer_text" type="text" placeholder="اكتب الإجابة الصحيحة" style="display:none; margin-top:8px;" />
+                </div>
 
-      <div class="row">
-        <div>
-          <label for="subject">المادة</label>
-          <div class="actions" style="gap:8px; align-items: stretch;">
-            <select id="subject" style="flex:1; min-height: 46px; font-size: 15px;"></select>
-            <button type="button" id="add-subject-btn" style="min-width:46px; background:#5f5f5f; box-shadow:none;">+</button>
+                <div class="row">
+                  <div>
+                    <label for="subject">المادة</label>
+                    <div class="actions" style="gap:8px; align-items: stretch;">
+                      <select id="subject" style="flex:1; min-height: 46px; font-size: 15px;"></select>
+                      <button type="button" id="add-subject-btn" style="min-width:46px; background:#5f5f5f; box-shadow:none;">+</button>
+                    </div>
+                  </div>
+                  <div>
+                    <label for="term">الترم</label>
+                    <select id="term" style="min-height: 46px; font-size: 15px;">
+                      <option value="term_1">term_1</option>
+                      <option value="term_2">term_2</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="row">
+                  <div>
+                    <label for="chapter">الفصل</label>
+                    <input id="chapter" type="text" />
+                  </div>
+                  <div>
+                    <label for="lesson">الدرس</label>
+                    <input id="lesson" type="text" />
+                  </div>
+                </div>
+                <div class="row">
+                  <div>
+                    <label for="grade_level">الصف الدراسي</label>
+                    <input id="grade_level" type="text" placeholder="مثال: الصف الثالث" disabled />
+                  </div>
+                  <div>
+                    <label for="education_type">نوع التعليم</label>
+                    <input id="education_type" type="text" placeholder="مثال: عام / لغات" disabled />
+                  </div>
+                </div>
+
+                <div class="actions" style="margin-top:12px;">
+                  <button id="submit-btn">رفع السؤال</button>
+                  <span class="muted" id="helper-text">سيتم الرفع للغرفة المحددة فقط، مع تحقق صلاحية Owner/Admin.</span>
+                </div>
+              </div>
+
+              <div id="questions-subpanel-bulk" class="questions-subpanel">
+                <div class="side-subnav" style="margin:0 0 12px; gap:8px;">
+                  <button type="button" id="bulk-subtab-pdf" class="subtab-btn active">استخراج من PDF</button>
+                  <button type="button" id="bulk-subtab-excel" class="subtab-btn">رفع/توليد (Excel/TSV)</button>
+                </div>
+
+                <div id="bulk-panel-pdf">
+                  <div class="pdf-box">
+                    <p class="title" style="font-size:18px; margin:0 0 6px;">📑 استخراج أسئلة من PDF (تلقائي)</p>
+                    <label for="pdf-file">اختر ملف PDF</label>
+                    <input id="pdf-file" type="file" accept="application/pdf" />
+                    <div class="pdf-actions">
+                      <button type="button" id="parse-pdf-btn" style="background:#5f5f5f; box-shadow:none;">تحليل الملف وملء المعاينة</button>
+                      <button type="button" id="clear-pdf-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">مسح</button>
+                    </div>
+                    <div id="pdf-status" class="pdf-status muted"></div>
+                    <div class="pdf-preview" id="pdf-text-preview" style="margin-top:8px;"></div>
+                    <div class="muted" style="margin-top:6px; font-weight:800;">بعد التحليل سيتم تعبئة معاينة الأسئلة أدناه بنفس زر "رفع كل الأسئلة".</div>
+                  </div>
+                </div>
+
+                <div id="bulk-panel-excel" style="display:none;">
+                  <div class="divider" style="margin:16px 0;"></div>
+                  <p class="title" style="font-size:18px;">📤 رفع مجموعة أسئلة من Excel (xlsx)</p>
+                  <div class="upload-box">
+                    <label for="excel-file">اختر ملف Excel (صفحة واحدة، أول صف هو أسماء الأعمدة)</label>
+                    <input id="excel-file" type="file" accept=".xlsx" />
+                    <div class="actions" style="margin-top:10px; gap:8px;">
+                      <button type="button" id="download-template-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">تنزيل قالب (مثال) Excel</button>
+                      <button type="button" id="parse-excel-btn" style="background:#5f5f5f; box-shadow:none;">قراءة الملف</button>
+                      <button type="button" id="upload-excel-btn" style="display:none;">رفع كل الأسئلة</button>
+                    </div>
+                    <div id="excel-status" class="status muted" style="margin-top:8px;"></div>
+                    <div id="excel-preview"></div>
+
+                    <div class="divider" style="margin:16px 0 8px;"></div>
+                    <p class="title" style="font-size:16px; margin:0 0 6px;">إنشاء أسئلة بمساعدة AI</p>
+                    <p class="muted" style="margin:0 0 8px;">
+                      الخطوات:
+                      <br />1) اضغط <b>Generate AI Prompt</b>.
+                      <br />2) املأ البيانات (المادة/الوحدة/الدرس/عدد الأسئلة/اللغة/أنواع الأسئلة) ثم اضغط <b>Copy the prompt</b>.
+                      <br />3) الصق البرومبت في ChatGPT/أي AI.
+                      <br />4) انسخ الناتج (الجدول TSV) والصقه في المربع التالي.
+                      <br />5) اضغط <b>قراءة النص</b> ثم <b>رفع كل الأسئلة</b>.
+                    </p>
+                    <div class="actions" style="gap:8px; flex-wrap:wrap;">
+                      <button type="button" id="open-prompt-modal-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">Generate AI Prompt</button>
+                    </div>
+                    <label for="csv-textarea" style="margin-top:10px;">الصق هنا جدول TSV أو CSV</label>
+                    <textarea id="csv-textarea" placeholder="subject	term	question_text	question_type	..."></textarea>
+                    <div class="actions" style="margin-top:8px; gap:8px;">
+                      <button type="button" id="parse-csv-btn" style="background:#5f5f5f; box-shadow:none;">قراءة النص</button>
+                      <button type="button" id="clear-csv-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">مسح</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="questions-subpanel-view" class="questions-subpanel">
+                <p class="title">📚 عرض الأسئلة</p>
+                <div class="row" style="align-items:end;">
+                  <div>
+                    <label for="questions-search">بحث (داخل نص السؤال)</label>
+                    <input id="questions-search" type="text" placeholder="اكتب كلمة للبحث..." />
+                  </div>
+                  <div class="actions" style="margin-top:0; gap:8px; justify-content:flex-start;">
+                    <button type="button" id="questions-refresh-btn" style="background:#5f5f5f; box-shadow:none;">تحديث</button>
+                  </div>
+                </div>
+                <div id="questions-list-status" class="status muted" style="margin-top:8px;"></div>
+                <div id="questions-list-container"></div>
+                <div class="actions" style="margin-top:10px; gap:8px; align-items:center;">
+                  <button type="button" id="questions-prev-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">السابق</button>
+                  <button type="button" id="questions-next-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">التالي</button>
+                  <span id="questions-page-info" class="muted" style="margin-right:auto;"></span>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-        <div>
-          <label for="term">الترم</label>
-          <select id="term" style="min-height: 46px; font-size: 15px;">
-            <option value="term_1">term_1</option>
-            <option value="term_2">term_2</option>
-          </select>
-        </div>
-      </div>
-      <div class="row">
-        <div>
-          <label for="chapter">الفصل</label>
-          <input id="chapter" type="text" />
-        </div>
-        <div>
-          <label for="lesson">الدرس</label>
-          <input id="lesson" type="text" />
-        </div>
-      </div>
-      <div class="row">
-        <div>
-          <label for="grade_level">الصف الدراسي</label>
-          <input id="grade_level" type="text" placeholder="مثال: الصف الثالث" disabled />
-        </div>
-        <div>
-          <label for="education_type">نوع التعليم</label>
-          <input id="education_type" type="text" placeholder="مثال: عام / لغات" disabled />
-        </div>
-      </div>
-
-      <div class="actions" style="margin-top:12px;">
-        <button id="submit-btn">رفع السؤال</button>
-        <span class="muted" id="helper-text">سيتم الرفع للغرفة المحددة فقط، مع تحقق صلاحية Owner/Admin.</span>
-      </div>
-        <div class="row" style="align-items:end;">
-          <div>
-            <label for="questions-search">بحث (داخل نص السؤال)</label>
-            <input id="questions-search" type="text" placeholder="اكتب كلمة للبحث..." />
-          </div>
-          <div class="actions" style="margin-top:0; gap:8px; justify-content:flex-start;">
-            <button type="button" id="questions-refresh-btn" style="background:#5f5f5f; box-shadow:none;">تحديث</button>
-          </div>
-        </div>
-        <div id="questions-list-status" class="status muted" style="margin-top:8px;"></div>
-        <div id="questions-list-container"></div>
-        <div class="actions" style="margin-top:10px; gap:8px; align-items:center;">
-          <button type="button" id="questions-prev-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">السابق</button>
-          <button type="button" id="questions-next-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">التالي</button>
-          <span id="questions-page-info" class="muted" style="margin-right:auto;"></span>
-        </div>
-      </div>
-      </div>
-    </div>
           </div>
 
           <div id="panel-members" class="tab-panel">
@@ -2839,6 +2901,7 @@
     if (questionsSubtabSingleBtn) questionsSubtabSingleBtn.addEventListener('click', () => setActiveQuestionsSubTab('single'));
     if (questionsSubtabBulkBtn) questionsSubtabBulkBtn.addEventListener('click', () => setActiveQuestionsSubTab('bulk'));
     if (questionsSubtabViewBtn) questionsSubtabViewBtn.addEventListener('click', () => setActiveQuestionsSubTab('view'));
+    setActiveQuestionsSubTab('single');
     if (membersRefreshBtn) membersRefreshBtn.addEventListener('click', loadRoomMembers);
     if (membersSearchInput) membersSearchInput.addEventListener('input', loadRoomMembers);
     if (questionsRefreshBtn) questionsRefreshBtn.addEventListener('click', () => { questionsPage = 0; loadRoomQuestions(); });
