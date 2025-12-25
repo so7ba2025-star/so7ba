@@ -695,63 +695,6 @@
         <button id="submit-btn">رفع السؤال</button>
         <span class="muted" id="helper-text">سيتم الرفع للغرفة المحددة فقط، مع تحقق صلاحية Owner/Admin.</span>
       </div>
-      <div id="submit-status" class="status"></div>
-
-      </div>
-
-      <div id="questions-subpanel-bulk" class="questions-subpanel">
-
-      <div class="pdf-box">
-        <p class="title" style="font-size:18px; margin:0 0 6px;">📑 استخراج أسئلة من PDF (تلقائي)</p>
-        <label for="pdf-file">اختر ملف PDF</label>
-        <input id="pdf-file" type="file" accept="application/pdf" />
-        <div class="pdf-actions">
-          <button type="button" id="parse-pdf-btn" style="background:#5f5f5f; box-shadow:none;">تحليل الملف وملء المعاينة</button>
-          <button type="button" id="clear-pdf-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">مسح</button>
-        </div>
-        <div id="pdf-status" class="pdf-status muted"></div>
-        <div class="pdf-preview" id="pdf-text-preview" style="margin-top:8px;"></div>
-        <div class="muted" style="margin-top:6px; font-weight:800;">بعد التحليل سيتم تعبئة معاينة الأسئلة أدناه بنفس زر "رفع كل الأسئلة".</div>
-      </div>
-
-      <div class="divider" style="margin:16px 0;"></div>
-      <p class="title" style="font-size:18px;">📤 رفع مجموعة أسئلة من Excel (xlsx)</p>
-      <div class="upload-box">
-        <label for="excel-file">اختر ملف Excel (صفحة واحدة، أول صف هو أسماء الأعمدة)</label>
-        <input id="excel-file" type="file" accept=".xlsx" />
-        <div class="actions" style="margin-top:10px; gap:8px;">
-          <button type="button" id="download-template-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">تنزيل قالب (مثال) Excel</button>
-          <button type="button" id="parse-excel-btn" style="background:#5f5f5f; box-shadow:none;">قراءة الملف</button>
-          <button type="button" id="upload-excel-btn" style="display:none;">رفع كل الأسئلة</button>
-        </div>
-        <div id="excel-status" class="status muted" style="margin-top:8px;"></div>
-        <div id="excel-preview"></div>
-
-        <div class="divider" style="margin:16px 0 8px;"></div>
-        <p class="title" style="font-size:16px; margin:0 0 6px;">إنشاء أسئلة بمساعدة AI</p>
-        <p class="muted" style="margin:0 0 8px;">
-          الخطوات:
-          <br />1) اضغط <b>Generate AI Prompt</b>.
-          <br />2) املأ البيانات (المادة/الوحدة/الدرس/عدد الأسئلة/اللغة/أنواع الأسئلة) ثم اضغط <b>Copy the prompt</b>.
-          <br />3) الصق البرومبت في ChatGPT/أي AI.
-          <br />4) انسخ الناتج (الجدول TSV) والصقه في المربع التالي.
-          <br />5) اضغط <b>قراءة النص</b> ثم <b>رفع كل الأسئلة</b>.
-        </p>
-        <div class="actions" style="margin-top:8px; gap:8px;">
-          <button type="button" id="open-prompt-modal-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">Generate AI Prompt</button>
-        </div>
-        <textarea id="csv-textarea" rows="5" placeholder="الصق محتوى CSV هنا (أول صف هو العناوين)"></textarea>
-        <div class="actions" style="margin-top:8px; gap:8px;">
-          <button type="button" id="parse-csv-btn" style="background:#5f5f5f; box-shadow:none;">قراءة النص</button>
-          <button type="button" id="clear-csv-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">مسح النص</button>
-        </div>
-      </div>
-
-      </div>
-
-      <div id="questions-subpanel-view" class="questions-subpanel">
-      <p class="title" style="font-size:18px; margin-top:0;">📚 عرض أسئلة الغرفة</p>
-      <div class="upload-box" style="background:#fff;">
         <div class="row" style="align-items:end;">
           <div>
             <label for="questions-search">بحث (داخل نص السؤال)</label>
@@ -955,6 +898,10 @@
     const questionsSubpanelSingle = document.getElementById('questions-subpanel-single');
     const questionsSubpanelBulk = document.getElementById('questions-subpanel-bulk');
     const questionsSubpanelView = document.getElementById('questions-subpanel-view');
+    const bulkSubtabPdfBtn = document.getElementById('bulk-subtab-pdf');
+    const bulkSubtabExcelBtn = document.getElementById('bulk-subtab-excel');
+    const bulkPanelPdf = document.getElementById('bulk-panel-pdf');
+    const bulkPanelExcel = document.getElementById('bulk-panel-excel');
 
     const questionsSearchInput = document.getElementById('questions-search');
     const questionsRefreshBtn = document.getElementById('questions-refresh-btn');
@@ -2873,6 +2820,22 @@
     downloadTemplateBtn.addEventListener('click', handleDownloadTemplate);
     parseCsvBtn.addEventListener('click', handleParseCsv);
     clearCsvBtn.addEventListener('click', handleClearCsv);
+    function setActiveBulkSubtab(which) {
+      if (!bulkSubtabPdfBtn || !bulkSubtabExcelBtn || !bulkPanelPdf || !bulkPanelExcel) return;
+      const isPdf = which === 'pdf';
+      bulkSubtabPdfBtn.classList.toggle('active', isPdf);
+      bulkSubtabExcelBtn.classList.toggle('active', !isPdf);
+      bulkPanelPdf.style.display = isPdf ? 'block' : 'none';
+      bulkPanelExcel.style.display = isPdf ? 'none' : 'block';
+    }
+
+    if (bulkSubtabPdfBtn) {
+      bulkSubtabPdfBtn.addEventListener('click', () => setActiveBulkSubtab('pdf'));
+    }
+    if (bulkSubtabExcelBtn) {
+      bulkSubtabExcelBtn.addEventListener('click', () => setActiveBulkSubtab('excel'));
+    }
+    setActiveBulkSubtab('pdf');
     if (parsePdfBtn) parsePdfBtn.addEventListener('click', handleParsePdf);
     if (clearPdfBtn) clearPdfBtn.addEventListener('click', clearPdf);
 
