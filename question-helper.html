@@ -7,7 +7,6 @@
   <link rel="icon" type="image/png" href="favicon.png" />
   <script src="https://unpkg.com/@supabase/supabase-js@2" crossorigin="anonymous"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js" crossorigin="anonymous"></script>
   <style>
     :root {
       --bg: #0b0404;
@@ -864,9 +863,13 @@
     const SUPABASE_URL = 'https://hredzoouykvmoczrtugy.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyZWR6b291eWt2bW9jenJ0dWd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNDI2MzAsImV4cCI6MjA3NzgxODYzMH0.4frhZ21FaYyEkrKap7XH74GsaREfbJts_xz77jULqoc';
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    if (window['pdfjsLib']) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js';
-    }
+    const PDF_JS_URLS = [
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js',
+      'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.2.67/build/pdf.min.js',
+      'https://unpkg.com/pdfjs-dist@4.2.67/build/pdf.min.js',
+    ];
+    const PDF_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js';
+    let pdfJsReadyPromise = null;
 
     const authCard = document.getElementById('auth-card');
     const appShell = document.getElementById('app-shell');
@@ -2313,9 +2316,37 @@
       return questions;
     }
 
+    async function ensurePdfJs() {
+      if (window['pdfjsLib']) {
+        if (pdfjsLib.GlobalWorkerOptions) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
+        }
+        return pdfjsLib;
+      }
+      if (!pdfJsReadyPromise) {
+        pdfJsReadyPromise = (async () => {
+          for (const url of PDF_JS_URLS) {
+            try {
+              await import(url);
+              if (window['pdfjsLib']) {
+                if (pdfjsLib.GlobalWorkerOptions) {
+                  pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
+                }
+                return pdfjsLib;
+              }
+            } catch (e) {
+              console.warn('PDF.js load failed', url, e);
+            }
+          }
+          throw new Error('تعذر تحميل PDF.js من كل المصادر');
+        })();
+      }
+      return pdfJsReadyPromise;
+    }
+
     async function extractPdfText(arrayBuffer) {
-      if (!window['pdfjsLib']) throw new Error('PDF.js غير متوفر');
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdfLib = await ensurePdfJs();
+      const loadingTask = pdfLib.getDocument({ data: arrayBuffer });
       const pdf = await loadingTask.promise;
       let fullText = '';
       for (let i = 1; i <= pdf.numPages; i++) {
@@ -2331,10 +2362,6 @@
       const file = pdfFileInput.files?.[0];
       if (!file) {
         setPdfStatus('اختر ملف PDF أولاً', 'error');
-        return;
-      }
-      if (!window['pdfjsLib']) {
-        setPdfStatus('مكتبة PDF.js غير متاحة', 'error');
         return;
       }
       setPdfStatus('جارٍ قراءة الملف وتحليله...', 'muted');
