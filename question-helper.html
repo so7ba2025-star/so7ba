@@ -725,7 +725,7 @@
 
                 <div id="bulk-panel-pdf">
                   <div class="pdf-box">
-                    <p class="title" style="font-size:18px; margin:0 0 6px;">📑 استخراج أسئلة من PDF (تلقائي)</p>
+                    <p class="title" style="font-size:18px; margin:0 0 6px;">📑 استخراج أسئلة من PDF (تلقائي + معاينة تفاعلية)</p>
                     <label for="pdf-file">اختر ملف PDF</label>
                     <input id="pdf-file" type="file" accept="application/pdf" />
                     <div class="pdf-actions">
@@ -733,14 +733,24 @@
                       <button type="button" id="clear-pdf-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">مسح</button>
                     </div>
                     <div id="pdf-status" class="pdf-status muted"></div>
-                    <div class="pdf-preview" id="pdf-text-preview" style="margin-top:8px;"></div>
-                    <div class="muted" style="margin-top:6px; font-weight:800;">بعد التحليل سيتم تعبئة معاينة الأسئلة أدناه بنفس زر "رفع كل الأسئلة".</div>
+                    <label for="pdf-text-preview" style="margin-top:10px; display:block;">النص المنظم (أول 12000 حرف)</label>
+                    <pre id="pdf-text-preview" style="background:#fff; border:1px solid #e7d9c6; padding:10px; min-height:80px; max-height:220px; overflow:auto; white-space:pre-wrap;"></pre>
+
+                    <div id="pdf-questions-preview" style="display:none; margin-top:12px;"></div>
+
+                    <div id="ai-prompt-actions" style="display:none; margin-top:12px;">
+                      <div class="actions" style="gap:8px; flex-wrap:wrap;">
+                        <button type="button" id="generate-ai-prompt-btn" style="background:#5f5f5f; box-shadow:none;">توليد برومبت إجابات AI ونسخه</button>
+                        <button type="button" id="apply-ai-answers-btn" class="ghost-btn" style="color:#2f241f; border-color:#c6b299;">تطبيق إجابات AI على الجدول</button>
+                      </div>
+                      <label for="ai-answers-textarea" style="margin-top:8px;">ضع هنا إجابات AI (سطر لكل سؤال: 1) B أو 1) الاختيار)</label>
+                      <textarea id="ai-answers-textarea" placeholder="1) B&#10;2) C&#10;3) D ..." style="min-height:120px;"></textarea>
+                      <p class="muted" style="margin:6px 0 0;">يتم حفظ الإجابات مباشرة في الجدول أدناه. يمكنك التعديل يدويًا بعد اللصق.</p>
+                    </div>
                   </div>
                 </div>
 
-                <div id="bulk-panel-excel" style="display:none;">
-                  <div class="divider" style="margin:16px 0;"></div>
-                  <p class="title" style="font-size:18px;">📤 رفع مجموعة أسئلة من Excel (xlsx)</p>
+                <div id="bulk-panel-excel">
                   <div class="upload-box">
                     <label for="excel-file">اختر ملف Excel (صفحة واحدة، أول صف هو أسماء الأعمدة)</label>
                     <input id="excel-file" type="file" accept=".xlsx" />
@@ -969,6 +979,11 @@
     const clearPdfBtn = document.getElementById('clear-pdf-btn');
     const pdfStatus = document.getElementById('pdf-status');
     const pdfTextPreview = document.getElementById('pdf-text-preview');
+    const pdfQuestionsPreview = document.getElementById('pdf-questions-preview');
+    const aiPromptActions = document.getElementById('ai-prompt-actions');
+    const generateAiPromptBtn = document.getElementById('generate-ai-prompt-btn');
+    const applyAiAnswersBtn = document.getElementById('apply-ai-answers-btn');
+    const aiAnswersTextarea = document.getElementById('ai-answers-textarea');
 
     let currentUser = null;
     let allowedRooms = []; // { room_id, name, role, code, description, logo_url, host_id, metadata }
@@ -976,6 +991,7 @@
     let selectedRoomLogoUrl = null;
     let excelQuestions = [];
     let excelErrors = [];
+    let pdfQuestionsActive = false; // يحدد أن البيانات الحالية جاءت من PDF
 
     const questionsSideSubnav = document.getElementById('questions-side-subnav');
 
@@ -2047,16 +2063,16 @@
       const total = excelQuestions.length;
       const errors = excelErrors.length;
       const sample = excelQuestions.slice(0, 5);
-      let html = `<div class=\"status ${errors ? 'error' : 'success'}\">تم تجهيز ${total} سؤال${errors ? `، أخطاء: ${errors}` : ''}</div>`;
+      let html = `<div class="status ${errors ? 'error' : 'success'}">تم تجهيز ${total} سؤال${errors ? `، أخطاء: ${errors}` : ''}</div>`;
       if (errors && total > 0) {
-        html += `<div class=\"muted\" style=\"margin-top:6px; font-weight:800;\">سيتم رفع السطور السليمة فقط عند الضغط على زر الرفع.</div>`;
+        html += `<div class="muted" style="margin-top:6px; font-weight:800;">سيتم رفع السطور السليمة فقط عند الضغط على زر الرفع.</div>`;
       }
       if (errors) {
         const firstErrors = excelErrors.slice(0, 5).map((e) => `<li>${e}</li>`).join('');
-        html += `<p class=\"muted\" style=\"margin:6px 0 4px;\">أول الأخطاء:</p><ul class=\"muted\" style=\"margin:0 0 8px 0; padding-left:16px;\">${firstErrors}</ul>`;
+        html += `<p class="muted" style="margin:6px 0 4px;">أول الأخطاء:</p><ul class="muted" style="margin:0 0 8px 0; padding-left:16px;">${firstErrors}</ul>`;
       }
       if (sample.length) {
-        html += `<table class=\"preview-table\"><thead><tr><th>#</th><th>النص</th><th>النوع</th><th>الإجابة</th><th>الاختيارات</th></tr></thead><tbody>`;
+        html += `<table class="preview-table"><thead><tr><th>#</th><th>النص</th><th>النوع</th><th>الإجابة</th><th>الاختيارات</th></tr></thead><tbody>`;
         sample.forEach((q, idx) => {
           html += `<tr><td>${idx + 1}</td><td>${q.question_text.slice(0, 60)}</td><td>${q.question_type}</td><td>${q.correct_answer}</td><td>${(q.options || []).join(' | ')}</td></tr>`;
         });
@@ -2064,6 +2080,142 @@
       }
       excelPreview.innerHTML = html;
       uploadExcelBtn.style.display = total > 0 ? 'inline-flex' : 'none';
+    }
+
+    function renderPdfQuestionsPreview() {
+      if (!pdfQuestionsPreview) return;
+      const show = pdfQuestionsActive && excelQuestions.length > 0;
+      if (!show) {
+        pdfQuestionsPreview.style.display = 'none';
+        pdfQuestionsPreview.innerHTML = '';
+        if (aiPromptActions) aiPromptActions.style.display = 'none';
+        return;
+      }
+      if (aiPromptActions) aiPromptActions.style.display = 'block';
+      pdfQuestionsPreview.style.display = 'block';
+
+      const rows = excelQuestions;
+      let html = `<table class="pdf-table"><thead><tr><th>#</th><th>نص السؤال</th><th>النوع</th><th>تحديد الإجابة الصحيحة</th></tr></thead><tbody>`;
+      rows.forEach((q, idx) => {
+        const opts = q.options || [];
+        let control = '';
+        if (opts.length >= 2) {
+          const radios = opts
+            .map(
+              (o, i) =>
+                `<label style="display:block; margin-bottom:4px;"><input type="radio" name="pdf-correct-${idx}" data-correct-for="${idx}" value="${o.replace(/"/g, '&quot;')}" ${
+                  q.correct_answer === o ? 'checked' : ''
+                } /> ${String.fromCharCode(65 + i)}) ${o}</label>`
+            )
+            .join('');
+          control = `<div>${radios}</div>`;
+        } else {
+          control = `<input type="text" class="pdf-correct-text" data-correct-for="${idx}" value="${q.correct_answer || ''}" placeholder="اكتب الإجابة" style="width:100%;">`;
+        }
+        html += `<tr>
+          <td>${idx + 1}</td>
+          <td>${q.question_text || ''}</td>
+          <td>${q.question_type}</td>
+          <td>${control}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      pdfQuestionsPreview.innerHTML = html;
+    }
+
+    function handlePdfCorrectChange(e) {
+      const target = e.target;
+      if (!target?.dataset?.correctFor) return;
+      const idx = Number(target.dataset.correctFor);
+      if (Number.isNaN(idx) || !excelQuestions[idx]) return;
+      const val = target.type === 'radio' ? target.value : target.value.trim();
+      excelQuestions[idx].correct_answer = val;
+      renderExcelPreview();
+    }
+
+    function buildAiPromptFromPdfQuestions() {
+      const total = excelQuestions.length;
+      const header =
+        'أنت مساعد لتحديد الإجابات الصحيحة للأسئلة التالية. أرجو الرد بنفس الترتيب في شكل سطر لكل سؤال: "رقم) الحرف" مثلاً: 1) A';
+      const questionsText = excelQuestions
+        .map((q, idx) => {
+          const opts = q.options || [];
+          const optionsText =
+            opts && opts.length
+              ? opts
+                  .map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`)
+                  .join(' | ')
+              : 'إجابة مفتوحة: اكتب الإجابة النصية.';
+          return `${idx + 1}) ${q.question_text}\n${optionsText}`;
+        })
+        .join('\n\n');
+      const footer = 'الرجاء الرد بصيغة:\n1) A\n2) C\n3) النص الكامل للإجابة المفتوحة إن وجدت.';
+      return [header, '', questionsText, '', footer].join('\n');
+    }
+
+    function handleGenerateAiPromptFromPdf() {
+      if (!pdfQuestionsActive || !excelQuestions.length) {
+        setPdfStatus('لا توجد أسئلة PDF لعمل برومبت.', 'error');
+        return;
+      }
+      const prompt = buildAiPromptFromPdfQuestions();
+      navigator.clipboard
+        .writeText(prompt)
+        .then(() => setPdfStatus('تم نسخ برومبت الأسئلة إلى الحافظة.', 'success'))
+        .catch(() => setPdfStatus('تعذّر النسخ التلقائي، انسخ يدويًا.', 'error'));
+    }
+
+    function handleApplyAiAnswersFromPdf() {
+      if (!pdfQuestionsActive || !excelQuestions.length) {
+        setPdfStatus('لا توجد أسئلة PDF لتطبيق الإجابات.', 'error');
+        return;
+      }
+      const raw = (aiAnswersTextarea.value || '').split(/\r?\n/).map((l) => l.trim()).filter((l) => l);
+      if (!raw.length) {
+        setPdfStatus('ضع إجابات AI أولاً.', 'error');
+        return;
+      }
+      const errors = [];
+      raw.forEach((line) => {
+        const m = line.match(/^\s*(\d+)\s*[\)\-:.,]?\s*(.+)$/);
+        if (!m) {
+          errors.push(`صيغة غير مفهومة: ${line}`);
+          return;
+        }
+        const idx = Number(m[1]) - 1;
+        if (idx < 0 || idx >= excelQuestions.length) {
+          errors.push(`رقم سؤال خارج النطاق: ${m[1]}`);
+          return;
+        }
+        const answerRaw = m[2].trim();
+        if (!answerRaw) {
+          errors.push(`سؤال ${m[1]}: إجابة فارغة`);
+          return;
+        }
+        const letterMatch = answerRaw.match(/^([A-Da-dأابجده١٢٣٤])([\)\-:.,]\s*)?(.*)$/);
+        const opts = excelQuestions[idx].options || [];
+        let resolved = answerRaw;
+        if (letterMatch) {
+          const label = letterMatch[1];
+          const rest = letterMatch[3]?.trim();
+          const optIdx = optionIndexFromLabel(label);
+          if (optIdx >= 0 && opts[optIdx]) {
+            resolved = opts[optIdx];
+          } else if (rest) {
+            resolved = rest;
+          }
+        } else if (opts.length) {
+          const found = opts.find((o) => normalizeStr(o) === normalizeStr(answerRaw));
+          if (found) resolved = found;
+        }
+        excelQuestions[idx].correct_answer = resolved;
+      });
+      renderExcelPreview();
+      renderPdfQuestionsPreview();
+      setPdfStatus(
+        errors.length ? `تم التطبيق مع ${errors.length} تحذير. أول تحذير: ${errors[0]}` : 'تم تطبيق إجابات AI.',
+        errors.length ? 'error' : 'success'
+      );
     }
 
     function setExcelStatus(msg, variant = 'muted') {
