@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>مساعد الأسئلة - أحلى صحبة</title>
+  <title>مدير الغرفة - أحلى صحبة</title>
   <link rel="icon" type="image/png" href="favicon.png" />
   <script src="https://unpkg.com/@supabase/supabase-js@2" crossorigin="anonymous"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -888,13 +888,14 @@
     const SUPABASE_URL = 'https://hredzoouykvmoczrtugy.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyZWR6b291eWt2bW9jenJ0dWd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNDI2MzAsImV4cCI6MjA3NzgxODYzMH0.4frhZ21FaYyEkrKap7XH74GsaREfbJts_xz77jULqoc';
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // استخدمنا نسخة UMD ثابتة من PDF.js لتفادي 404 / MIME errors في النسخة 4.x (ESM)
+    const PDFJS_VERSION = '3.11.174';
     const PDF_JS_URLS = [
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js',
-      'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.2.67/build/pdf.min.js',
-      'https://unpkg.com/pdfjs-dist@4.2.67/build/pdf.min.js',
-      'https://mozilla.github.io/pdf.js/build/pdf.min.js',
+      `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.min.js`,
+      `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/build/pdf.min.js`,
+      `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.min.js`,
     ];
-    const PDF_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js';
+    const PDF_WORKER_URL = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.js`;
     // Fallback: use local bundled PDF.js if CDN fails
     const LOCAL_PDF_JS_URL = './pdf.min.js';
     const LOCAL_PDF_WORKER_URL = './pdf.worker.min.js';
