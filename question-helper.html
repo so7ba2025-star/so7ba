@@ -895,6 +895,9 @@
       'https://mozilla.github.io/pdf.js/build/pdf.min.js',
     ];
     const PDF_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js';
+    // Fallback: use local bundled PDF.js if CDN fails
+    const LOCAL_PDF_JS_URL = './pdf.min.js';
+    const LOCAL_PDF_WORKER_URL = './pdf.worker.min.js';
     let pdfJsReadyPromise = null;
 
     const authCard = document.getElementById('auth-card');
@@ -2379,20 +2382,35 @@
 
     function loadScriptOnce(url) {
       return new Promise((resolve, reject) => {
-        const existing = document.querySelector(`script[data-pdfjs="${url}"]`);
-        if (existing) {
-          existing.onload = () => resolve();
-          existing.onerror = () => reject(new Error('فشل تحميل ' + url));
-          if (window['pdfjsLib']) return resolve();
+        // Check if script already loaded
+        if (document.querySelector(`script[data-pdfjs="${url}"]`)) {
+          resolve();
           return;
         }
+        
         const s = document.createElement('script');
         s.src = url;
         s.async = true;
         s.defer = true;
         s.setAttribute('data-pdfjs', url);
-        s.onload = () => resolve();
-        s.onerror = () => reject(new Error('فشل تحميل ' + url));
+        s.crossOrigin = 'anonymous'; // Add CORS attribute
+        
+        s.onload = () => {
+          console.log(`Successfully loaded: ${url}`);
+          resolve();
+        };
+        
+        s.onerror = (event) => {
+          const error = new Error(`فشل تحميل ${url}`);
+          error.details = {
+            url: url,
+            event: event,
+            timestamp: new Date().toISOString()
+          };
+          console.error(`Script load error details:`, error.details);
+          reject(error);
+        };
+        
         document.head.appendChild(s);
       });
     }
@@ -2406,6 +2424,7 @@
       }
       if (!pdfJsReadyPromise) {
         pdfJsReadyPromise = (async () => {
+          // Try CDN URLs first
           for (const url of PDF_JS_URLS) {
             try {
               await loadScriptOnce(url);
@@ -2419,7 +2438,23 @@
               console.warn('PDF.js load failed', url, e);
             }
           }
-          throw new Error('تعذر تحميل PDF.js من كل المصادر');
+          
+          // Fallback: try local files
+          try {
+            console.log('Trying local PDF.js files...');
+            await loadScriptOnce(LOCAL_PDF_JS_URL);
+            if (window['pdfjsLib']) {
+              if (pdfjsLib.GlobalWorkerOptions) {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = LOCAL_PDF_WORKER_URL;
+              }
+              console.log('Local PDF.js loaded successfully');
+              return pdfjsLib;
+            }
+          } catch (e) {
+            console.warn('Local PDF.js load failed', e);
+          }
+          
+          throw new Error('تعذر تحميل PDF.js من كل المصادر (CDN و المحلية)');
         })();
       }
       return pdfJsReadyPromise;

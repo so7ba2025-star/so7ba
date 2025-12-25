@@ -1,0 +1,15 @@
+// Instructions for PDF.js Manual Setup
+// 
+// The PDF.js library failed to load from CDN sources. To fix this:
+//
+// 1. Download these files manually:
+//    - https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js
+//    - https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js
+//
+// 2. Save them in the web directory as:
+//    - pdf.min.js (replace this placeholder file)
+//    - pdf.worker.min.js (replace the other placeholder file)
+//
+// 3. Refresh the page and try the PDF import again
+//
+// Alternative: Check your internet connection or browser settings that might block CDN access.
