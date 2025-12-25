@@ -2832,9 +2832,9 @@
     uploadRoomLogoBtn.addEventListener('click', uploadRoomLogo);
     roomLogoLibrary.addEventListener('change', () => setRoomLogoPreview(roomLogoLibrary.value));
     removeRoomLogoBtn.addEventListener('click', () => setRoomLogoPreview(null));
-    addSubjectBtn.addEventListener('click', addSubject);
-    tabRoomBtn.addEventListener('click', () => setActiveTab('room'));
-    tabQuestionsBtn.addEventListener('click', () => setActiveTab('questions'));
+    if (addSubjectBtn) addSubjectBtn.addEventListener('click', addSubject);
+    if (tabRoomBtn) tabRoomBtn.addEventListener('click', () => setActiveTab('room'));
+    if (tabQuestionsBtn) tabQuestionsBtn.addEventListener('click', () => setActiveTab('questions'));
     if (tabMembersBtn) tabMembersBtn.addEventListener('click', () => setActiveTab('members'));
     if (questionsSubtabSingleBtn) questionsSubtabSingleBtn.addEventListener('click', () => setActiveQuestionsSubTab('single'));
     if (questionsSubtabBulkBtn) questionsSubtabBulkBtn.addEventListener('click', () => setActiveQuestionsSubTab('bulk'));
@@ -2847,11 +2847,11 @@
     if (questionsNextBtn) questionsNextBtn.addEventListener('click', () => { questionsPage = questionsPage + 1; loadRoomQuestions(); });
     if (saveEditQuestionBtn) saveEditQuestionBtn.addEventListener('click', saveEditedQuestion);
     if (closeEditQuestionModalBtn) closeEditQuestionModalBtn.addEventListener('click', closeEditQuestionModal);
-    parseExcelBtn.addEventListener('click', handleParseExcel);
-    uploadExcelBtn.addEventListener('click', handleUploadExcel);
-    downloadTemplateBtn.addEventListener('click', handleDownloadTemplate);
-    parseCsvBtn.addEventListener('click', handleParseCsv);
-    clearCsvBtn.addEventListener('click', handleClearCsv);
+    if (parseExcelBtn) parseExcelBtn.addEventListener('click', handleParseExcel);
+    if (uploadExcelBtn) uploadExcelBtn.addEventListener('click', handleUploadExcel);
+    if (downloadTemplateBtn) downloadTemplateBtn.addEventListener('click', handleDownloadTemplate);
+    if (parseCsvBtn) parseCsvBtn.addEventListener('click', handleParseCsv);
+    if (clearCsvBtn) clearCsvBtn.addEventListener('click', handleClearCsv);
     function setActiveBulkSubtab(which) {
       if (!bulkSubtabPdfBtn || !bulkSubtabExcelBtn || !bulkPanelPdf || !bulkPanelExcel) return;
       const isPdf = which === 'pdf';
